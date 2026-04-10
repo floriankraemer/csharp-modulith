@@ -1,0 +1,70 @@
+---
+alwaysApply: true
+---
+
+# Testing
+
+- You MUST always write tests for your code
+- You MUST write tests before your write the code (see [tdd.mdc](.cursor/rules/tdd.mdc) for TDD workflow)
+- Use PHPUnit for unit and integration tests
+- Tests MUST test positive and negative outcomes
+- Run PHPUnit in the container `docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/console cache:clear && bin/phpunit"`
+- Never test private methods
+- Never test classes for being final or readonly
+- Never try to mock final classes
+- Use mocks and stubs to isolate tests
+- Never test Input and Result transfer objects
+- Never test two things in one test case, test only the method at hand
+- All tests of a capability MUST have the `#[Group('<CapabilityName>')]` attribute with the name of the capability.
+- Test methods MUST have the `#[Test]` attribute
+- Test method names MUST NOT use the BDD-style `it` prefix (e.g. `itCanBeCreated`, `itThrowsWhenEmpty`). Use descriptive camelCase that starts with a lowercase verb or phrase, e.g. `canBeCreated`, `throwsWhenEmailIsEmpty`, `emitsSubscriptionWasCreatedEvent`.
+- For tests that are the same but use different data use PHPUnit data providers
+- Code that is tenant aware MUST have tests to check if the read or written data gets the tenant id applied correctly.
+- Always run tests with `export XDEBUG_MODE=off`
+- When you are done with your task run ALL tests, if there are errors fix them until all tests pass
+
+## Test method naming
+
+- Bulk cleanup of accidental `it*` test names: `php scripts/rename-it-prefixed-test-methods.php` from the backend project root (default: list renames; `--apply` rewrites files).
+
+## Arrange, Act, Assert
+
+- Every PHPUnit test method MUST use comments `// Arrange`, `// Act`, and `// Assert` to separate the three phases (at least once each per method).
+- **Arrange** – fixtures, mocks, `KernelBrowser` / client, `login()`, and any prerequisite data or HTTP setup required before exercising the subject.
+- **Act** – the call(s) that directly exercise the code under test (e.g. the use case invocation, repository method, or the primary HTTP request for that behavior). Prefer one clear Act block; if the scenario has distinct exercise-then-verify cycles, repeat `// Act` and `// Assert` in pairs for each cycle.
+- **Assert** – expectations only (`assert*`), plus any follow-up reads or HTTP calls made solely to verify outcomes (e.g. `GET` after a `POST` to confirm persisted state).
+
+## Test Base Classes
+
+- **ApiTestCase** – for HTTP/API controller tests; provides `apiCall()`, `login()`, `loginBackendUser()`, `getFixtureGenerator()`, `assertResponseIsProblemJson()`
+- **AppTestCase** – extends `ApiTestCase`; use for integration tests needing container, fixtures, tenant context
+
+## Fixture Data
+
+- Use `$this->getFixtureGenerator()` in tests extending `ApiTestCase` or `AppTestCase`
+- Prefer `FixtureGenerator` methods over raw DB inserts
+- Use constants from `FixtureGenerator` / `BaseFixtureGenerator` for known IDs (e.g. `FixtureGenerator::USER_EMAIL`, `FixtureGenerator::ORGANIZATION_ID`) when tests rely on `AppFixtures` data
+- For isolated tests, create entities via `FixtureGenerator` with custom data; avoid depending on `AppFixtures` when possible
+- New domain entities: add `create*` methods to the appropriate `*FixtureGenerator` and expose via `FixtureGenerator`
+
+## OpenAPI Validation
+
+- Controller tests SHOULD assert responses against the OpenAPI spec when the endpoint is documented
+- Use `Phauthentic\PHPUnit\OpenAPIValidator\Symfony\OpenAPIValidatorSymfonyTrait` and `OpenAPISymfonySchemaValidator`
+- Schema path by API type:
+  - Http: `openapi/openapi-http.yaml`
+  - FrontendApi: `openapi/openapi-frontend-api.yaml`
+  - BackendApi: `openapi/openapi-backend-api.yaml`
+- Call `assertResponseMatchesOpenAPISchema($path, $method)` after successful API calls (path and method must match OpenAPI operation)
+- Run `php scripts/merge-openapi.php` before tests if OpenAPI specs changed
+
+## Test Subject Rules
+
+- Repositories MUST have integration tests
+- Repositories MUST have 85% or more code coverage
+- Facades MUST have integration tests
+- Controllers MUST be tested, the use case used by it CAN be mocked
+- Any repository that is relying on the tenant MUST have test cases to test tenant isolation
+- Use Cases MUST have 85% or more code coverage
+- Facade tests MUST be integration tests and mock only bridges to other modules
+- Use case tests MUST be integration tests and mock only bridges to other modules

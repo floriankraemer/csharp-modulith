@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+- Always line break methods with more than one argument 
+- Always use named arguments for method calls with more than one argument
+- Try to keep lines shorter than 120 characters

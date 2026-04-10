@@ -1,0 +1,73 @@
+---
+description: Authentication and role-based access control for Public API and Backend API
+alwaysApply: true
+---
+
+# Authentication and Access Control
+
+Use Symfony's [access_control](https://symfony.com/doc/7.4/security/access_control.html) for authorization. The first matching rule wins; order matters.
+
+## Public API (`^/api`)
+
+- **Firewall**: JWT, `app_user_provider` (organization users)
+- **Default**: `IS_AUTHENTICATED_FULLY` for all `/api` paths not explicitly listed
+- **Public endpoints**: Use `roles: PUBLIC_ACCESS` (login, signup, health, webhooks, etc.)
+- **Organization admin only**: Use `roles: ROLE_ORG_ADMIN` for endpoints that require the user to be an organization admin (`organization_member.role = 'admin'`)
+
+### Organization Role-Based Access (ROLE_ORG_ADMIN)
+
+- Organization admin is a **domain role** (from `organization_member`), not a Symfony User role
+- Use a **Voter** to grant `ROLE_ORG_ADMIN` when the current user's organization membership has `role = 'admin'`
+- Reference implementation: `App\Capability\Organizations\Infrastructure\Security\OrganizationAdminVoter`
+- Add `access_control` rules **before** the generic `^/api` rule so they match first
+
+### Adding Organization-Admin-Only Endpoints
+
+1. Add an `access_control` entry in `config/packages/security.yaml`:
+   - Place it **before** the generic `- { path: ^/api, roles: IS_AUTHENTICATED_FULLY }` rule
+   - Use `roles: ROLE_ORG_ADMIN`
+   - Use `path` (regex), optionally `methods` for method-specific rules
+2. **Do NOT** inject or call guards in controllers; access is enforced by Symfony before the controller runs
+3. Controllers can assume the user is an org admin when the route is protected
+
+### Example access_control for Public API
+
+```yaml
+# Specific rules first (more specific paths before generic)
+- { path: ^/api/organization-subscriptions, roles: ROLE_ORG_ADMIN }
+- { path: ^/api/organization-invoices, roles: ROLE_ORG_ADMIN }
+- { path: ^/api/organization-invites$, methods: [POST], roles: ROLE_ORG_ADMIN }
+- { path: ^/api/organization-invites/[^/]+/cancel, roles: ROLE_ORG_ADMIN }
+- { path: ^/api/organization-members/[^/]+/activate, roles: ROLE_ORG_ADMIN }
+- { path: ^/api/organization-members/[^/]+/deactivate, roles: ROLE_ORG_ADMIN }
+- { path: ^/api/organization-members/[^/]+$, methods: [PUT, PATCH], roles: ROLE_ORG_ADMIN }
+# Generic: any authenticated org user
+- { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+```
+
+## Backend API (`^/backend`)
+
+- **Firewall**: JWT, `backoffice_user_provider` (backoffice users)
+- **Default**: `IS_AUTHENTICATED_FULLY` for all `/backend` paths
+- **Admin-only paths**: Use `roles: ROLE_BACKOFFICE_ADMIN` (or similar) for paths that require backoffice admin
+- Backoffice roles are **Symfony User roles** (from `BackofficeUser::getRoles()`)
+
+### Example access_control for Backend API
+
+```yaml
+- { path: ^/backend/users, roles: ROLE_BACKOFFICE_ADMIN }
+- { path: ^/backend, roles: IS_AUTHENTICATED_FULLY }
+```
+
+## Rules Summary
+
+| API Type   | Path Prefix | User Source        | Role Type              | How to Enforce                    |
+|------------|-------------|--------------------|------------------------|-----------------------------------|
+| Public     | `^/api`     | Organization users | Domain (org_member)    | Voter + `ROLE_ORG_ADMIN`          |
+| Backend    | `^/backend` | Backoffice users   | Symfony User roles    | `access_control` with role name   |
+
+## Do Not
+
+- **Do NOT** use guards or manual checks in controllers for organization admin; use `access_control` + voter
+- **Do NOT** catch `AccessDeniedException` in controllers; let Symfony return 403
+- **Do NOT** mix organization context (tenant) with backoffice context; they use different firewalls and providers

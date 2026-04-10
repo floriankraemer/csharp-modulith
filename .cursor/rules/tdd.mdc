@@ -1,0 +1,77 @@
+---
+description: Mandatory TDD Protocol (Backend)
+alwaysApply: true
+globs:
+  - "src/**/*.php"
+  - "tests/**/*.php"
+---
+
+# Test Driven Development (Mandatory)
+
+This repository uses strict TDD for all backend code changes.
+
+## Non-negotiable rules
+
+- You MUST create or update PHPUnit test(s) before writing production code.
+- You MUST run the new/updated test(s) and show they fail first (RED).
+- You MUST implement only the minimal production change needed to pass the failing test(s) (GREEN).
+- You MUST re-run the same test(s) and show they pass.
+- You MUST NOT change production code before a demonstrated RED step.
+- If a failing test cannot be produced first, STOP and ask the user for clarification.
+- New or changed PHPUnit tests MUST follow the Arrange / Act / Assert comment rules and test method naming (no `it*` BDD-style names) in [testing.mdc](.cursor/rules/testing.mdc).
+
+## Required execution protocol (always in this order)
+
+1. **RED PREP**: Add/adjust test(s) that express the required behavior or bug.
+2. **RED RUN**: Execute targeted PHPUnit test command; it should fail for the expected reason.
+3. **GREEN CODE**: Implement minimal production code change.
+4. **GREEN RUN**: Re-run the same targeted test command; it should pass.
+5. **REFACTOR (optional)**: Refactor while keeping tests green.
+6. **SAFETY GATES**: Run mandatory project checks (phpcbf, phpstan, phpunit full suite).
+
+## Evidence that MUST be provided in task updates
+
+For every backend task, report these checkpoints explicitly:
+
+- `RED_TESTS`: which test file(s)/method(s) were added or changed
+- `RED_OUTPUT`: command + key failing assertion/error
+- `GREEN_CHANGES`: which production files were changed
+- `GREEN_OUTPUT`: command + passing result
+- `FINAL_GATES`: results of PHPCBF, PHPStan, full PHPUnit run
+
+If any checkpoint is missing, the task is incomplete.
+
+## Bugfix-specific protocol
+
+When fixing a bug:
+
+1. Create a test that reproduces the bug.
+2. Run it and confirm failure.
+3. Implement the fix.
+4. Re-run and confirm pass.
+5. Run final quality gates.
+
+## New feature-specific protocol
+
+When implementing a feature:
+
+1. Start with behavior-focused tests for acceptance of the feature.
+2. Confirm failing tests.
+3. Implement incrementally in small slices, repeating RED → GREEN.
+4. Run final quality gates.
+
+## Prohibited shortcuts
+
+- No “test-after” implementation.
+- No claiming TDD without a demonstrated failing test.
+- No broad implementation before first RED result.
+- No finishing task without final gate outputs.
+
+## Command conventions
+
+- Run commands in containerized backend environment per project rules.
+- Always set `XDEBUG_MODE=off` for test and analysis commands.
+
+Example PHPUnit run:
+
+`docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/console cache:clear && bin/phpunit"`

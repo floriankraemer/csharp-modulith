@@ -1,0 +1,21 @@
+---
+description: Exception Conventions
+alwaysApply: true
+---
+
+# Exceptions
+
+`<CapabilityName>` is the placeholder for the capabiliy name.
+
+- Each capability MUST have those exceptions:
+  - `src/Capability/<CapabilityName>/<CapabilityName>Exception.php` extending `src/AppException`
+  - `src/Capability/<CapabilityName>/<CapabilityName>/Application/<CapabilityName>ApplicationException.php` extending the modules main exception.
+  - `src/Capability/<CapabilityName>/<CapabilityName>/Domain/<CapabilityName>DomainException.php` extending the modules main exception.
+  - `src/Capability/<CapabilityName>/<CapabilityName>/Domain/InvariantViolationException.php` extending the domain exception.
+  - `src/Capability/<CapabilityName>/<CapabilityName>/Inrastructure/<CapabilityName>InfrastructureException.php` extending the modules main exception.
+  - `src/Capability/<CapabilityName>/<CapabilityName>/Presentation/<CapabilityName>PresentationException.php` extending the modules main exception.
+- Exceptions SHOULD NOT be instantiated with the `new` keyword and provide meaningful static constructors for different cases.
+  - Those methods will take all arguments that are required to build the error message internall
+  - Those methods will take all arguments that are required for any additional functionality
+- Components that throw multiple Exceptions SHOULD have their own exception class next to them.
+- Try-catch MUST NOT be used in Facades, Use Cases and Controllers unless explicitly specified.

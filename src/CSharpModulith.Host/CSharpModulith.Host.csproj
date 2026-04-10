@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>CSharpModulith.Host</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CSharpModulith.ServiceDefaults\CSharpModulith.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\CSharpModulith.Shared\CSharpModulith.Shared.csproj" />
+    <ProjectReference Include="..\Capability\Order\CSharpModulith.Capability.Order\CSharpModulith.Capability.Order.csproj" />
+    <ProjectReference Include="..\Capability\Payment\CSharpModulith.Capability.Payment\CSharpModulith.Capability.Payment.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+---
+
+# Facade Design
+
+- Facades MUST have no argument or only one argument that follows the pattern `src/Capability/<CapabilityName>/Application/Requests/<MethodName>Request.php`
+- Facades MUST have void or only one return type that follows the pattern `src/Capability/<CapabilityName>/Application/Responses/<MethodName>Response.php`
+- Those objects must take only primitives
+- Those objects must be read only and final
+- Facades SHOULD favor broad interfaces over concrete methods, e.g. batch over single operations if feasible
+- The response objects must implement static methods
+  - `withSuccess()` with any number of arguments setting the required data.
+  - `withFailure(<CapabilityName>Failure $failure, ?string $message)` the method CAN have additional arguments
+
+## Specification Block
+
+Every facade interface must document all of methods with a first line `Specification:`, followed by an empty line, then followed by a list of things the facade methods will do, only behavior, business logic should be describered here.
+
+### Specification Block Example
+
+```php
+/**
+ * Specification:
+ * 
+ * - First line
+ * - Second line
+ *   - Sub-line
+ */
+public function checkout()
+{
+
+}
+```
+
+## Facade Tests
+
+- Facades MUST be fully tested, all possible outcomes MUST be tested
+- Facades tests are integration tests, don't mock anything except external systems.
+- Facade testS MUST be placed in `tests/Capability/<CapabilityName>/Application/`
+
+
+
+
+
+
+

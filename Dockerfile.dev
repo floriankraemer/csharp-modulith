@@ -1,0 +1,29 @@
+# .NET SDK image for local dev: build, test, and run-app via Makefile (mounted repo at /src).
+# Build with host ids so writes to bin/obj on the bind mount succeed (see Makefile DEV_UID/DEV_GID).
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+ARG DEV_USER=devuser
+ARG DEV_UID=10001
+ARG DEV_GID=10001
+
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends sudo; \
+    rm -rf /var/lib/apt/lists/*; \
+    if getent passwd "${DEV_UID}" >/dev/null 2>&1; then \
+        U="$(getent passwd "${DEV_UID}" | cut -d: -f1)"; \
+        echo "${U} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/10-dev-sudo; \
+    elif getent group "${DEV_GID}" >/dev/null 2>&1; then \
+        G="$(getent group "${DEV_GID}" | cut -d: -f1)"; \
+        useradd --uid "${DEV_UID}" --gid "${G}" -m -s /bin/bash "${DEV_USER}"; \
+        echo "${DEV_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${DEV_USER}"; \
+    else \
+        groupadd --gid "${DEV_GID}" "${DEV_USER}"; \
+        useradd --uid "${DEV_UID}" --gid "${DEV_GID}" -m -s /bin/bash "${DEV_USER}"; \
+        echo "${DEV_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${DEV_USER}"; \
+    fi; \
+    chmod 0440 /etc/sudoers.d/*
+
+# Numeric user so it always matches the build args (existing or new account).
+USER ${DEV_UID}:${DEV_GID}
+WORKDIR /src

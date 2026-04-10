@@ -1,0 +1,40 @@
+# Persistence Testing Standards
+
+Use these rules for all tests under `tests/Capability/**/Infrastructure/Persistence/**`.
+
+## Core Requirements
+
+- Repository and query-builder tests MUST use real database execution.
+- Tests MUST run in the project containerized test environment.
+- Tests MUST use fixture generators/builders for setup data whenever possible.
+- Tests MUST assert behavior and query outcomes (returned rows/counts/state changes), not call choreography.
+
+## Mocking Policy
+
+- You MUST NOT mock database operation dependencies in persistence tests:
+  - `Doctrine\DBAL\Connection`
+  - Doctrine query builder classes
+  - query-builder factories
+  - Doctrine entity managers/registries used for DB operations
+- `TenantContextInterface` MAY be mocked only for narrowly scoped SQL-shape tests.
+- Default pattern is integration style with `AppTestCase` and `setTenantId()`.
+
+## Tenant Coverage
+
+- Tenant-aware persistence tests MUST include:
+  - positive same-tenant assertions
+  - negative cross-tenant isolation assertions
+
+## Isolation and Determinism
+
+- Each test MUST own its setup data and avoid reliance on shared mutable state.
+- Use unique identifiers/codes/names per test case.
+- Avoid assertions that depend on implicit ordering unless order is explicitly set in query logic.
+
+## Preferred Pattern
+
+- Extend `App\Tests\AppTestCase`.
+- Resolve repositories/builders from the container where practical.
+- Create setup data via `FixtureGenerator`.
+- Set tenant via `$this->setTenantId(...)`.
+- Verify persisted/retrieved data using real DB-backed execution.

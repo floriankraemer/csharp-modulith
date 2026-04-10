@@ -1,0 +1,35 @@
+---
+description: Fixture data standards for integrity, tenant consistency, and realistic e-commerce test data
+globs: "{src/DataFixtures/**/*.php,tests/**/*.php}"
+alwaysApply: false
+---
+
+# Fixture Data Integrity
+
+- Use realistic fictional e-commerce data only (shops, products, customers, carts, orders, invoices, shipments).
+- Never use lorem ipsum, placeholder gibberish, or random inconsistent sample text.
+- Preserve existing fixture anchors used by tests (stable IDs, emails, organization IDs, references) unless a change is explicitly required.
+- Keep references valid: no orphan entities, no broken foreign-key style relations, no duplicate values for unique fields.
+- Ensure tenant-aware data is isolated per tenant/organization; do not mix cross-tenant relations.
+- Ensure organization members belong to the correct organization and roles match the scenario under test.
+- Keep lifecycle data coherent (timestamps, status progressions, totals, and payment/shipment states).
+
+## Example
+
+```php
+// ✅ Good: consistent organization + member + order relation
+$organization = OrganizationFixture::acmeRetail();
+$member = OrganizationMemberFixture::adminForOrganization($organization);
+$order = OrderFixture::paidOrderForOrganization(
+    organization: $organization,
+    createdByMember: $member,
+);
+```
+
+```php
+// ❌ Bad: member from another organization assigned to this order
+$order = OrderFixture::paidOrderForOrganization(
+    organization: $orgA,
+    createdByMember: $memberFromOrgB,
+);
+```

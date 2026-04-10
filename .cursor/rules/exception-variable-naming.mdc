@@ -1,0 +1,24 @@
+---
+description: Name caught throwables $exception, never $e
+globs: "**/*.php"
+alwaysApply: false
+---
+
+# Exception / throwable variable names
+
+- In `catch` clauses and parameters that hold a `Throwable`/`Exception`, use **`$exception`** (or a domain-specific name such as `$previous` when chaining).
+- **Do not** use **`$e`** for exception variables—prefer readable, self-documenting names.
+
+```php
+// Bad
+} catch (\Throwable $e) {
+    $this->log->error($e->getMessage());
+}
+
+// Good
+} catch (\Throwable $exception) {
+    $this->log->error($exception->getMessage());
+}
+```
+
+Private helpers that accept a caught instance should use the same convention: `function handleFailure(\Throwable $exception): void`.

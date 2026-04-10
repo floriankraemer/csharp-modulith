@@ -1,0 +1,29 @@
+---
+description: Use Cases
+alwaysApply: true
+globs: 
+---
+
+# Use Cases
+
+- Use cases are are implemented in the application layers `src/Capability/<Name>/UseCases/<UseCaseName>.php`.
+
+## Specification Block
+
+Every use case class must document all of methods with a first line `Specification:`, followed by an empty line, then followed by a list of things the use case does, only behavior, business logic should be described here.
+
+### Specification Block Example
+
+```php
+/**
+ * Specification:
+ *
+ * - First line
+ * - Second line
+ *   - Sub-line
+ */
+class SomeUseCase
+{
+   //...
+}
+```

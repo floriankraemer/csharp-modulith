@@ -1,0 +1,162 @@
+---
+description: Read Models
+alwaysApply: true
+globs: 
+---
+
+# Read Models
+
+`<EntityName>` is the placeholder in this document for the entity name you are going to implement.
+
+## Read Model Placement
+
+- Read models MUST be placed in `src/Capability/<CapabilityName>/Application/ReadModels/<EntityName>.php`.
+- Read models MUST be in the namespace `App\Capability\<CapabilityName>\Application\ReadModels`.
+
+## Read Model Structure
+
+- Read models MUST be `readonly` classes.
+- Read models MUST implement `\JsonSerializable`.
+- Read models SHOULD implement `\Stringable` if a meaningful string representation exists.
+- Read models MUST use public properties with visibility scope propagation in the constructor (e.g., `public string $property`).
+- Read models MUST contain only data, no business logic or behavior.
+- Read models MUST be immutable (enforced by `readonly`).
+
+## Read Model Implementation
+
+- The `jsonSerialize()` method MUST return an array with all properties, using camelCase keys.
+- The `__toString()` method (if implemented) SHOULD return a meaningful string representation of the read model.
+
+## Read Repository Interface
+
+- Read repository interfaces MUST be placed in the Application layer of a capability `src/Capability/<CapabilityName>/Application/Repositories/<RepositoryName>RepositoryInterface.php`.
+- Read repository implementations MUST be implemented in the Infrastructure layer of a capability `src/Capability/<CapabilityName>/Infrastructure/Persistence/Doctrine/<RepositoryName>ReadRepository.php`.
+- Read repository interfaces MUST be in the namespace `App\Capability\<CapabilityName>\Application\Repositories`.
+- Read repository interfaces MUST define methods that return read models or arrays of read models.
+- Read repository interfaces MAY define methods that return primitives (e.g., `countAll(): int`, `existsByX(): bool`).
+- Repository methods MUST take Query objects as arguments.
+
+## Read Repository Implementation
+
+- Read repository implementations MUST be placed in `src/Capability/<CapabilityName>/Infrastructure/Persistence/<PersistenceType>/<EntityName>ReadRepository.php`.
+- Read repository implementations MUST be in the namespace `App\Capability\<CapabilityName>\Infrastructure\Persistence\<PersistenceType>`.
+- Read repository implementations MUST implement the corresponding read repository interface.
+- Read repository implementations MUST use **query builders** from `QueryBuilderFactoryInterface` (capability-specific `*QueryBuilder` classes) for database reads, analogous to write repositories. Do not embed SQL string assembly or row-to-model mapping inline in the repository.
+- Read repository implementations MUST delegate row → read model conversion to dedicated read mappers (see **Mappers** below).
+- Read repository implementations MUST NOT return domain entities or aggregates directly.
+
+## Cross-module enrichment (read projections)
+
+When a read model needs data from another capability (for example organization member display name or photo on an owner row):
+
+- Perform enrichment in the **read repository implementation**, after loading tenant-scoped rows from persistence.
+- **Collect foreign IDs** from the loaded result set (including nested structures such as subdomain trees) and call the **capability bridge** in **one batch** per repository operation (for example `findMembers` with all distinct member IDs). Avoid N+1 calls to another module.
+- **Do not** call another module’s facade from use cases for pure read-model enrichment; use cases orchestrate business operations, not projection joins.
+- **Do not** inject foreign facades into read repositories; use the **bridge interface** defined under `Application/Bridges/`.
+- Merge enriched fields into read models or plain arrays attached to the read model; keep read models immutable (replace arrays when needed).
+
+## Mappers (read / projection path only)
+
+- These mappers are **not** aggregate write mappers. Do **not** use `ObjectAccessor` here; read models are built through their **constructors** (and nested read types if any), not via generic object hydration.
+- Do **not** mix aggregate `<AggregateName>Mapper` (ObjectAccessor, write repository) with read projection mappers in the same class. Two mapper types: **aggregate write mapper** vs **read row / projection mapper**—keep them separate.
+- Placement: `src/Capability/<CapabilityName>/Infrastructure/Persistence/<PersistenceType>/Mapper/`.
+- Naming: `<EntityName>ViewModelMapper` or `<EntityName>ReadRowMapper` (or similar explicit read-projection name). Avoid reusing the aggregate write mapper filename pattern for read-only projections when it would blur responsibilities.
+- Mappers MUST be in the namespace `App\Capability\<CapabilityName>\Infrastructure\Persistence\<PersistenceType>\Mapper`.
+- Mappers MUST be `readonly` classes.
+- Mappers MUST expose a method such as `map(array $data): <ReadModel>` that converts a DB row (associative array) into a read model instance, typically `return new <ReadModel>(...)` after column → property mapping.
+- Mappers MUST handle database column name to read model property name conversion (e.g., `background_color` → `backgroundColor`).
+- Mappers MUST handle nullable fields appropriately.
+
+## Query Objects
+
+- Query objects for complex queries MUST be placed in `src/Capability/<CapabilityName>/Application/Queries/<QueryName>Query.php`.
+- Query objects MUST be in the namespace `App\Capability\<CapabilityName>\Application\Queries`.
+- Query objects MUST be `readonly` classes.
+- Query objects SHOULD use criteria objects for filtering (e.g., `FindBadgeCriteria`).
+- Query objects SHOULD use shared query objects like `Paging` and `SortBy` from `App\Shared\Application\Queries` when applicable.
+- Query objects that are paginated MUST include `Paging` (or an equivalent shared pagination object) in their constructor.
+
+### Paginateable and filterable Query Objects
+
+```php
+use App\Shared\Application\Queries\Paging;
+use App\Shared\Application\Queries\SortBy;
+
+readonly class ListOrdersQuery(
+    public ListOrdersCriteria $criteria,
+    public Paging $paging,
+    public SortBy $sortBy,
+) {
+}
+```
+
+## Query Builders
+
+- Query builders for complex queries MUST be placed in `src/Capability/<CapabilityName>/Infrastructure/Persistence/<PersistenceType>/QueryBuilder/<QueryName>QueryBuilder.php`.
+- Query builders MUST be in the namespace `App\Capability\<CapabilityName>\Infrastructure\Persistence\<PersistenceType>\QueryBuilder`.
+- Query builders SHOULD extend the persistence technology's query builder (e.g., `Doctrine\DBAL\Query\QueryBuilder`).
+- Query builders MUST have an `applyQuery(<QueryName>Query $query): self` method that applies the query to the builder.
+- Query builders SHOULD have private helper methods for applying filters and ordering.
+
+## Examples
+
+### Read Model Example
+
+```php
+readonly class Badge implements Stringable, JsonSerializable
+{
+    public function __construct(
+        public string $badgeId,
+        public string $content,
+        public ?string $backgroundColor,
+        public ?string $textColor,
+        public ?string $icon,
+        public string $createdAt,
+        public string $updatedAt,
+    ) {
+    }
+
+    public function __toString(): string
+    {
+        return $this->content;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'backgroundColor' => $this->backgroundColor,
+            'badgeId' => $this->badgeId,
+            'content' => $this->content,
+            'createdAt' => $this->createdAt,
+            'icon' => $this->icon,
+            'textColor' => $this->textColor,
+            'updatedAt' => $this->updatedAt,
+        ];
+    }
+}
+```
+
+### Read Repository Interface Example
+
+```php
+interface BadgeReadRepositoryInterface
+{
+    /**
+     * @return array<Badge>
+     */
+    public function find(FindBadgeQuery $query): array;
+}
+```
+
+### Query Object for paginateable and sortable Queries
+
+```php
+readonly class FindBadgeQuery
+{
+    public function __construct(
+        public FindBadgeCriteria $critiera,
+        public SortBy $sortBy,
+        public Pagination $pagination
+    ) {}
+}
+```

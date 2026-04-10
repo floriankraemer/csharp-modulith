@@ -1,0 +1,202 @@
+---
+description: Modular Monolith Architecture Rules
+alwaysApply: true
+globs: 
+---
+
+# Application Level Folder & File Structure
+
+```text
+src/
+|-- AppException.php                              # Module base exception
+|-- AppConfig.php                                 # Module specific configuration
+|-- Capability/                                   # All business capabilities / modules
+```
+
+# Modules
+
+- Modules must be placed in `src/Capability`.
+- All business capabilities, also called modules, must be placed in `src/Capability`.
+
+## Module Base Classes
+
+```text
+src/
+|-- Capability/                                   # All business capabilities / modules
+|   |-- <Name>/                                   # Root of the capability
+|   |   |-- <Name>Exception.php                   # Module base exception
+|   |   |-- <Name>Failure.php                     # Error Codes
+|   |   |-- <Name>Config.php                      # Module specific configuration
+```
+
+# Facades
+
+- Facades must be placed in the application layer of a module `src/Capability/<moduleName>/Application/` and prefixed with the module name, e.g. `UserFacade`.
+- Facade methods must have only one transfer object as argument that is placed in `Application/Transfers` in the module.
+  - Transfer objects must use the suffix "Request".
+  - Use the visibility scope propagation in the constructor to make the properties public.
+- Facade methods should return a transfer object suffixed with "Result" when needed.
+  - The result object must have a `isSuccessful` property that returns a boolean.
+  - The result object should be readonly.
+- You MUST NOT catch exceptions in the facades unless explicitly specified.
+
+# Layers
+
+## Application Layer
+
+- Each module MUST have an "Application", "Domain" and "Infrastructure" folder.
+- A facade CAN use use case input and result objects if it just delegates to a use case.
+- A facade method that does NOT delegate to a use case must use its Input and Result transfers from `Transfers` folder.
+- Queries contains sub-folders that are named after the data they present, they are also called a view.
+- Repository interfaces for the queries are in  `src/Capability/<moduleName>/Application/Repositories`.
+- Interfaces for the queries are in  `src/Capability/<moduleName>/Application/Repositories`.
+- Folders inside the application layer SHOULD be in plural form.
+- The application layer MUST NOT have dependenices on 3rd party libraries unless explicitly specified.
+- You MUST NOT catch exceptions in the use cases unless explicitly specified.
+- Bridge interfaces to other modules are in `src/Capability/<moduleName>/Application/Bridges`
+
+### Application Layer Folder Structure
+
+```text
+src/
+|-- Capability/                                      # All business capabilities / modules
+|   |-- <Name>/                                      # Root of the capability
+|   |   |-- Application/                             # Application layer (ports)
+|   |   |   |-- UseCases/                            # Use Cases / "Application services"
+|   |   |   |   |-- <UCName>/                        # Use Case folder by its name.
+|   |   |   |   |   |-- <UCName>.php                 # The use case file by its name.
+|   |   |   |   |   |-- <UCName>Input.php            # The input DTO for facades & use cases
+|   |   |   |   |   |-- <UCName>Result.php           # The result object for facades & use cases
+|   |   |   |-- Repositories/                        # Read-repository interfaces
+|   |   |   |-- -- <Name>ReadRepositoryInterface.php # External Event Handler (Integration Events)
+|   |   |   |-- Queries/                             # The objects the read repository returns
+|   |   |   |   |-- <QueryName>/                     # The query name (e.g. "ShoppingCartView")
+|   |   |   |   |   |-- <QueryName>.php              # The query by its name.
+|   |   |   |-- IntegrationEventHandlers/            # External Event Handler (Integration Events)
+|   |   |   |-- DomainEventHandlers/                 # Domain internal Event Handlers
+|   |   |   |-- Jobs/                                # Long running async Background Jobs
+|   |   |   |   |-- <JobName>Handler.php             # Job Handler handling jobs.
+|   |   |   |   |-- <JobName>Job.php                 # The job object.
+|   |   |   |-- Bridges/                             # The bridge interfaces.
+|   |   |   |   |-- <ExtName>BridgeInterface.php     # A bridge interface.
+|   |   |   |-- Services/                            # Application Layer services
+|   |   |   |-- Requests/                            # Request / Input objects for facades methods
+|   |   |   |-- Responses/                           # Response / Return objects for facade methods
+|   |   |   |-- <Name>Facade.php                     # Entry point for the module
+|   |   |   |-- <Name>FacadeInterface.php            # Entry point for the module
+|   |   |   |-- <Name>ApplicationException           # Application Layer Base Exception for the module
+```
+
+## Domain Layer
+
+- Domain Events must be placed in `src/Capability/<moduleName>/Domain/Model/<Aggregate>/Events`
+- The DDD tactical patterns must be used in the Domain layer.
+- The aggregates, value objects and entities must be placed in `src/Capability/<moduleName>/Domain/Model/<Aggregate>`.
+  - One aggregate must have one aggregate folder.
+  - Aggregates must not share objects.
+- An aggregate must have an ID object that has the same name as the aggregate with the suffix "Id".
+  - The id object must implement a `fromString` and `__toString` method.
+- An aggregate must have a static create() except there is a better name matching the ubiquitous language.
+- The domain layer layer MUST NOT have dependenices on 3rd party libraries unless explicitly specified.
+- You MUST NOT catch exceptions in the domain layer unless explicitly specified.
+
+### Domain Layer Folder Structure
+
+```text
+src/
+|-- Capability/                                   # All business capabilities / modules
+|   |-- <Name>/                                   # Root of the capability
+|   |   |-- Domain/                               # Domain layer (pure business logic)
+|   |   |   |-- Model/                            # Domain model(s)
+|   |   |   |   |-- <Aggregate>/                  # Aggregate sub-folder, name of the aggreate
+|   |   |   |   |   |-- Events/                   # Domain events the aggregate emits
+|   |   |   |   |   |-- <Entity>.php/             # Entities for domain models
+|   |   |   |   |   |-- <ValueObject>.php         # Value objects for aggregates
+|   |   |   |-- Services/                         # Domain-specific services
+|   |   |   |-- Repositories/                     # Contains the repository interfaces.
+|   |   |   |   |-- <Name>RepositoryInterface     # Write Repository Interface
+```
+
+## Infrastructure Layer
+
+- Repositories MUST implement an interface that is placed 
+  - is placed in `src/Capability/<Name>/Application/Repositories`.
+  - is placed in `src/Capability/<Name>/Domain/Repositories`.
+- Repositories MUST be placed in `src/Capability/<Name>/Infrastructure/Persistence/<PersistenceType>/`, where `<PersistenceType>` is the choosen technology, e.g. "Doctrine", or "Doctrine/DBAL", "Doctrine/ORM" etc
+- **Persistence style:** Write repositories follow `aggregate-persistence.mdc` (query builders + `<AggregateName>Mapper` using `ObjectAccessor` for aggregates only). Read repositories follow `read-models.mdc` (query builders + read mappers that instantiate read models via constructors). Repositories MUST NOT inline mapping logic for aggregates or read models.
+
+### Infrastructure Layer Folder Structure
+
+```text
+src/
+|-- Capability/                                   # All business capabilities / modules
+|   |-- <Name>/                                   # Root of the capability
+|   |   |-- Infrastructure/                       # Infrastructure layer (adapters, driven)
+|   |   |   |-- Persistence/                      # Database repositories and configurations
+|   |   |   |-- |-- Schema/                       # Database schema files
+|   |   |   |-- Dependencies/                     # External dependency management
+|   |   |   |-- Message/                          # Messaging systems (e.g., events, queues)
+|   |   |   |-- Email/                            # Email integration (for example)
+|   |   |   |-- Bridges/                          # Bridge implementations
+|   |   |       |-- <OtherModuleName>Bridge.php   # Bridge implementation to other capability
+|   |   |-- Presentation/                         # Presentation layer (adapters, driver)
+```
+
+## Presentation Layer
+
+- The presentation layers responsibility is to map the data from a use case to a client.
+- You MUST NOT do authentication or authorization checks in the presentation layer.
+- API controllers MUST be placed in `src/Capability/<moduleName>/Presentation/<type>/Controller/Api`
+- Controllers MUST implement only one method __invoke() and one use case per controller.
+- The presentation layer MUST be placed in `src/Capability/<moduleName>/Presentation`
+- The presentation layer MUST have a `src/Capability/<moduleName>/Presentation/<type>/ViewModel` folder that contains the view models.
+- The presentation layer MUST place mappers in the `src/Capability/<moduleName>/Presentation/<type>/Mapper` folder.
+- The presentation layer MUST place validators in the `src/Capability/<moduleName>/Presentation/<type>/Constraints` folder.
+- The presentation layer MUST place request DTOs in the `src/Capability/<moduleName>/Presentation/<type>/Requests` folder.
+- Controllers MUST implement an `__invoke()` method.
+- Controllers MUST inject the `App\Shared\Presentation\Http\ApiResponseFactoryInterface` as $apiResponse and use it to return the according response.
+- Controllers MUST implement a request DTO using this notation `<controllerName>RequestPayload.php`.
+  - The DTO MUST use Symfony validator attributes to validate the request.
+  - The DTO CAN have nested objects, implemented in the same folder.
+  - The DTO MUST be mapped to the use case input object via a mapper.
+- You MUST NOT catch exceptions in the controllers unless explicitly specified.
+- Validation errors of invalid inputs MUST return HTTP Status 422 and a problem details response.
+- DELETE requests SHOULD be idempotent and always return 204 no content and no body.
+
+### Presentation Layer Folder Structure
+
+```text
+src/
+|-- Capability/                                   # All business capabilities / modules
+|   |-- <Name>/                                   # Root of the capability
+|   |   |-- Presentation/                         # Presentation layer (adapters, driver)
+|   |   |   |-- CommandLine/                      # Command Line Interface
+|   |   |   |   |-- ConsoleCommands/              # Console Commands
+|   |   |   |   |-- ViewModels/                   # View model objects
+|   |   |   |   |-- ViewMappers/                  # Mappers to map the data to desired outputs
+|   |   |   |-- FrontendApi/                      # JSON API
+|   |   |   |   |-- Controllers/                  # Controllers
+|   |   |   |   |-- Requests/                     # Request DTOs
+|   |   |   |   |-- ViewModels/                   # View model objects
+|   |   |   |   |-- ViewMappers/                  # Mappers to map the data to desired outputs
+|   |   |   |   |-- <Name>FrontendApiOpenAPI.yaml # API documentation
+|   |   |   |-- BackendApi/                       # JSON API
+|   |   |   |   |-- Controllers/                  # Controllers
+|   |   |   |   |-- Requests/                     # Request DTOs
+|   |   |   |   |-- ViewModel/                    # View model objects
+|   |   |   |   |-- ViewMapper/                   # Mappers to map the data to desired outputs
+|   |   |   |   |-- <Name>BackendApiOpenAPI.yaml  # API documentation
+|   |   |   |-- <Name>PresentationException.php   # Presentation Layer Base Exception
+```
+
+# Shared Kernel
+
+- The shared kernel in `src/Shared` provides shared functionality that can be used by multiple modules.
+- Use the classes from it in the according layers if you see a need for them.
+
+
+
+
+
+
+

@@ -1,0 +1,10 @@
+services:
+  host:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: csharp-modulith-host:latest
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production

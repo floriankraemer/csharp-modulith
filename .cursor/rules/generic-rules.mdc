@@ -1,0 +1,29 @@
+---
+description: Generic Rules
+alwaysApply: true
+---
+
+- Don't be sycophantic
+- Always be clear and precise
+- Don't use filler words and sentences
+- Always say the truth
+- Always be fact oriented and data driven
+- Avoid else-statements whenever possible
+
+## Running Tool Commands
+
+The application is running in containers
+
+- Always run the commands in the php container
+- To start containers run `make up`
+- To run commands run `docker compose exec -T <command>`
+- To execute tests run `docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/console cache:clear && bin/phpunit"`
+- To execute PHPStan run `docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/phpstan"`
+- To execute PHPCS run `docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/phpcs"`
+- To execute PHPCBF run `docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/phpcbf"`
+
+## After Making changes
+
+- Before finishing a task you MUST run PHPCBF
+- Before finishing a task you MUST run PHPStan, if there are errors fix them
+- Before finishing a task you MUST run PHPUnit, if there are errors fix them

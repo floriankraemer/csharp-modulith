@@ -1,0 +1,23 @@
+---
+description: HTTP API controllers must not swallow exceptions; use ExceptionListener and narrow presentation catches only
+globs: src/Capability/**/Presentation/**/Controller/**/*.php
+alwaysApply: false
+---
+
+# HTTP API controller exceptions
+
+## Do not
+
+- Wrap **use case / domain work** (`execute()`, repository calls after input is built) in `catch (\Exception)` or `catch (\Throwable)` to return `badRequest()` / leak `$e->getMessage()` to clients. That hides bugs and wrong HTTP semantics.
+- Use `catch (\Throwable)` for optional integration steps (e.g. document parsing). Use `catch (\Exception)` only when the failure is a **documented client/parse error** (invalid upload content), not programming errors.
+
+## Do
+
+- Let exceptions bubble to **`App\Shared\Presentation\Http\ExceptionListener`** for consistent status mapping (see `ExceptionListener.php`: `InvalidArgumentException` / `RuntimeException` use message heuristics; generic `\Exception` → 500 in non-dev; `dev`/`debug` still pass through unmodified).
+- Keep **narrow, presentation-only** catches when mapping HTTP JSON to input, for example:
+  - `HttpJsonRequestValidationException` → `validationError()`
+  - `\InvalidArgumentException | InvariantViolationException` from request mappers → `validationError()` (or equivalent 422 shape)
+
+## Quick check before merging
+
+If a controller `catch` is not one of the allowed types above and it wraps `->execute()` or similar, **remove it** and rely on the listener; adjust tests to expected status codes (often 404 when the message contains `not found`, per listener rules).

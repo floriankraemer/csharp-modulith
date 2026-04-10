@@ -1,0 +1,12 @@
+---
+description: Bridges
+alwaysApply: true
+globs: 
+---
+
+# Bridges
+
+- The bridge pattern is used to connect two modules / capabilities.
+- The bridge MUST have an interface, implemented in the application layer `src/Capability/<Name>/Application/Bridges/<OtherCapabilityName>BridgeInterface.php`.
+- The bridge implementation MUST be in implemented in the infrastructure layer `src/Capability/<Name>/Infrastructure/Bridges/<OtherCapabilityName>Bridge.php` and implement the interface.
+- A bridge implementation MUST use the facade from another module, because direct module to module communication is allowed ONLY through the bridge

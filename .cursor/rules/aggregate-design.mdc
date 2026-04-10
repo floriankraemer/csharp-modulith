@@ -1,0 +1,47 @@
+---
+description: DDD Aggregate Design
+alwaysApply: true
+globs: ./
+---
+
+# Aggregate Design in DDD
+
+## Definitions
+
+- **Aggregate**: A cluster of domain objects (Entities and Value Objects) treated as a single unit for consistency and transactions.
+- **Aggregate Root**: The top-level Entity that acts as the entry point to the Aggregate. All external access goes through the Root.
+- **Entity**: An object defined by its identity (e.g., has an ID). Part of an Aggregate.
+- **Value Object**: An immutable object defined by its attributes (no ID). Used within Aggregates for attributes like addresses or money.
+- **Invariant**: A business rule that is enforced in the domain model.
+
+## Placement
+
+- Aggregates MUST reside in the domain layer: `src/Capability/<CapabilityName>/Domain/Model/<AggregateName>`.
+- Related Entities and Value Objects SHOULD be in subdirectories or the same package as the Aggregate Root, e.g., `src/Capability/<CapabilityName>/Domain/Model/<AggregateName>/<EntityName>`.
+
+## Structure
+
+- Aggregates MUST have a single Aggregate Root, which is an Entity.
+- Aggregates and entities MUST have ID value objects.
+- All Entities (including the Root) MUST have a unique ID following the pattern `<EntityName>Id` (e.g., `OrderId` for an Order Aggregate Root).
+- Value Objects MUST NOT have IDs and SHOULD be immutable.
+- Aggregates MUST NOT reference other Aggregates directly; use only IDs (e.g., `<OtherAggregateName>Id`) for cross-Aggregate references.
+- Aggregates MUST NOT depend on infrastructure layer (e.g., no database annotations or external service calls in domain code).
+- Aggregates MUST NOT depend on the application layer.
+- Aggregate classes MUST be declared as final.
+- Aggregate classes MUST NOT be final.
+- Aggregate classes MUST use the `src/Shared/Domain/Model/EventProducerTrait.php` trait.
+
+## Behavior
+
+- Aggregates MUST implement methods that reflect domain behavior and enforce business invariants (e.g., `placeOrder()` instead of just setting properties).
+- Aggregates MUST NOT expose public getters or setters that allow direct mutation of internal state without validation (e.g., use private setters and behavior methods like `addItem()` that check invariants).
+- Avoid anemic models: Aggregates SHOULD NOT be mere data holders; prioritize behavior over getters/setters.
+- Use factory methods for creation (e.g., static `create()` methods) to ensure valid initial state.
+- If using domain events, Aggregates SHOULD raise events in behavior methods (e.g., `OrderPlacedEvent`).
+
+## Invariants and Encapsulation
+
+- All changes within an Aggregate MUST maintain internal consistency (invariants), enforced by the Aggregate Root.
+- Aggregates MUST encapsulate their internal structure: Do not expose collections or child Entities directly (e.g., return read-only views or copies).
+- Aggregates MUST NOT have useless or trivial getters (e.g., avoid `getId()` if not needed externally; prefer behavior-focused APIs).

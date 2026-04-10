@@ -1,0 +1,22 @@
+---
+description: Messaging Contracts and Buses
+alwaysApply: true
+---
+
+# Messaging Contracts and Buses
+
+- Application job messages MUST implement `App\Shared\Application\Jobs\JobInterface`.
+- Integration event messages MUST implement `App\Shared\Application\IntegrationEvents\IntegrationEventInterface`.
+- Domain event messages MUST implement `App\Shared\Domain\Model\DomainEventInterface`.
+
+## Bus semantics
+
+- `domainEvent.bus` is for internal domain events only and SHOULD NOT route directly to AMQP transports.
+- `integration.bus` is for integration events and SHOULD use the integration transport.
+- `job.bus` is for asynchronous jobs and SHOULD use the job transport.
+
+## Messenger routing convention
+
+- Use interface-based Messenger routing, not per-class routing:
+  - `IntegrationEventInterface` -> integration transport
+  - `JobInterface` -> job transport

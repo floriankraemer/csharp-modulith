@@ -1,0 +1,228 @@
+---
+description: API Conventions
+alwaysApply: true
+---
+
+## Rules and Conventions
+
+- Multiple entities MUST use plural for the field name.
+- Single entities MUST use singular for the field name.
+- Fields MUST use the camel-cased notation.
+  - The first character MUST be lowercase.
+  - Connecting words MUST start with an uppercase letter, e.g. “firstSecondThird”
+  - Abbreviations MUST stay uppercase, e.g. “ITUser”
+- Data MUST be returned below the top level “data” field.
+- The entity or entities MUST be specified below the to level “data” field.
+  - The entity name MUST be used as a container for the fields, even if it is just a single entity at the moment that is returned.
+- API endpoints MUST return only data that clients need (no overfetching).
+- Errors MUST have an unique error code per service.
+- Error message MUST be expressive and clear:
+  - The cause of the error MUST be clearly defined if known.
+  - The element of the system causing the error message MUST be clear for the reader.
+  - Relevant context, e.g. IDs, entity type(s) and actor(s) MUST be included.
+  - If the error message is translatable is a decision made by the service.
+  - Any debug related information e.g. a stack trace, must NOT be part of the error response in a production environment.
+- Verbs SHOULD be used in resource paths that go beyond the basic CRUD functionality.
+Error and failure responses MUST follow the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html): Problem Details for HTTP APIs.
+- HTTP Verbs:
+  - POST MUST be used to create resources.
+  - PUT MUST be used to replace a whole resource. E.g. updating 10 out of 10 fields.
+  - PATCH MUST be used to modify a resource. E.g. updating 3 out of 10 fields.
+- If content is translatable and can be requested in a given language, this MUST be done via the HTTP header Accept-Language.
+- HTTP Status Code resolving MUST conform to the HTTP resolve flow.
+- Payloads and response bodies MUST be modelled for the needs of the consumers of the APIs, for easy use and consumption. Passing data 1:1 from the DB is not desired except the endpoint(s) are just CRUD or there is a good reason to do so. Naming and structure should always serve the clients needs and not just dump a DB schema to an API client.
+- Payloads and response bodies MUST NOT contain more data than necessary.
+- ETags MUST be used whenever possible and when they make sense.
+- Information that reveals business secrets or poses security risks and GDPR violations MUST NOT be part of the information returned by the API, not in regular responses nor error responses.
+- API controllers MUST be free of any business logic.
+
+## API Controller Example
+
+```php
+
+
+## Response Examples
+
+Single entity example:
+
+```text
+GET /users/123
+{
+  "data": {
+    "user": {
+      "username": "Foo"
+    }
+  }
+}
+```
+
+Example of returning a collection of entities:
+
+```text
+GET /users
+{
+  "data": {
+    "users": [
+       { ... },
+       { ... }
+    ]
+  }
+}
+```
+
+## Responses
+
+### Success Response
+
+- When an API call is successful, the operation is completed as expected.
+- Success responses MUST use a HTTP status code from the 200-299 range.
+
+### Failure Response
+
+When an API call fails due to client-side errors (e.g., invalid input), but it's not a server error. 
+
+- Failure responses MUST use a HTTP status code from the 400-499 range.
+- Failure responses MUST use RFC 9457.
+
+### Error Response
+
+When an API call encounters a server-side issue or a critical error.
+
+- Error responses MUST use a HTTP status code from the 500-599 range.
+- Error responses MUST use RFC 9457.
+
+## Delete Operations
+
+- The response payload of a DELETE request that has succeeded SHOULD be empty.
+- The respone payload MAY include a representation of the status of the action.
+
+And the following response status codes are suitable for a DELETE request that has succeeded:
+
+- 202: The request has been accepted for processing, but the processing has not been completed.
+- 204: The server has successfully fulfilled the request and that there is no additional content to send in the response payload body.
+- 200: The request has succeeded and the request payload includes a representation of the status of the action.
+
+Quote from RFC 7231:
+
+> If a DELETE method is successfully applied, the origin server SHOULD send a 202 (Accepted) status code if the action will likely succeed but has not yet been enacted, a 204 (No Content) status code if the action has been enacted and no further information is to be supplied, or a 200 (OK) status code if the action has been enacted and the response message includes a representation describing the status.
+
+## Pagination
+
+This section covers two different ways of iterating through data sets returned by an API: Cursor and page based pagination.
+
+### Conventions
+
+- A paginated resource MUST contain only one entity type that is paginated.
+- A paginated resource MUST decide between a cursor based solution without totals and a page based pagination.
+   - The cursor based pagination SHOULD be chosen only if there is a justifiable performance impact or no page based pagination is needed.
+   - The cursor based pagination MUST ensure that limit can’t be less than 1 or greater than a limit, that has to be decided by the service, depending on reasonable performance and payload size limitations.
+   - The cursor based pagination MUST return an empty array if the the cursor is out of range and no entities were returned.
+
+#### Cursor based Pagination
+
+Cursor based pagination means that only a limit and offset are given, no pages are calculated.
+
+- limit: Number of items per page.
+- offset: Where to begin.
+
+A limit of 25 with an offset of 100 means that the system would return row number 100 to 125 if any records exist within that range.
+
+Note that the response payload will not contain a pagination property because it can’t be calculated.
+
+Query Params Example:
+
+```text
+?offset=100&limit=25
+```
+
+#### Page based Pagination
+
+Page based means that the total number of entities is calculated and a specific page within the dataset can be requested.
+
+Query Params Example
+
+```text
+?page=12
+```
+
+#### Page based Pagination Payload Properties
+
+Adding the pagination property ensures the API consumer knows the pagination context without needing to calculate it manually. This is useful in paginated resources such as listing articles, products, or other collections that could span multiple pages.
+
+The Top-Level Property pagination will contain common pagination details, such as currentPage, totalPages, totalItems, and perPage. The reason it is a top-level property is to not mix the “control structure” with the actual “data structure” in the data property.
+
+- currentPage: The current page number requested.
+- totalPages: Total number of available pages.
+- perPage: Number of items per page.
+- totalItems: Total number of items in the dataset.
+
+#### Optional Page based Pagination Properties
+
+The optional properties can be included in the pagination object.
+
+- nextPage: Integer or null if there is none.
+- previousPage: Integer or null if there none.
+
+Example
+
+```json
+{
+  "data": 
+    "posts": [
+      { "id": 1, "title": "First Post" },
+      { "id": 2, "title": "Second Post" }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 10,
+    "perPage": 10,
+    "totalItems": 100,
+    "previousPage": null,
+    "nextPage": 2,
+  }
+}
+```
+
+## Filters
+
+The filter mechanism is specified to unify and standardize the filter behavior across services, to reduce the number of different implementations, on the producer but also consumer side.
+
+The filter mechanism is based on the [JSON-API filter](https://jsonapi.org/recommendations/#filtering).
+
+- Filters in GET requests MUST be specified as a query parameter.
+Filter conditions, involving logical operators, MUST BE grouped together under a single query parameter named filter.
+- Filters in POST requests SHOULD use a field filter.
+- Filter conditions, involving logical operators, MUST BE grouped together in this field.
+- How the filter value is generated is up to the service.
+- Documentation MUST be provided on how to build and parse it.
+
+### FilterCriteria (MUST use)
+
+For list/search endpoints that accept filter conditions, you MUST use the shared `FilterCriteria` object:
+
+- **Controllers**: Type-hint `App\Shared\Application\Queries\FilterCriteria` as a controller argument. The value resolver parses the `filter` query param and injects it automatically.
+- **Use cases / Repositories**: Pass the `FilterCriteria` object through. Apply it to queries using `App\Shared\Infrastructure\Persistence\QueryBuilder\FilterCriteriaQueryApplicator` with a field map (filter field name → DB column).
+- **Field map**: Define which filter fields are allowed and map them to database columns. Use `strictFields: true` to reject unmapped fields for security.
+- **Criteria objects**: When a use case or query needs filter criteria, use `FilterCriteria`—do not create ad-hoc criteria classes or pass raw arrays for filter conditions.
+
+Example controller:
+
+```php
+public function __invoke(FilterCriteria $filter): Response
+{
+    $this->someUseCase->execute(new SomeUseCaseInput(
+        filterCriteria: $filter
+    ));
+}
+```
+
+Example repository application:
+
+```php
+$this->filterApplicator->apply($queryBuilder, $filter, [
+    'status' => 'r.status',
+    'name' => 'r.name',
+], strictFields: true);
+```
+
+See [docs/Filter-Criteria.md](docs/Filter-Criteria.md) for full documentation.

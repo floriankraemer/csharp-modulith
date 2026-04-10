@@ -1,0 +1,314 @@
+---
+description: Open API
+alwaysApply: true
+globs: 
+---
+
+# Modular OpenAPI Documentation
+
+This document explains how OpenAPI specifications are organized in this modular monolith architecture.
+
+## Overview
+
+The API documentation follows the modular architecture: each module owns its API endpoints documentation, shared components are centralized, and a build script merges everything into consolidated API specs by presentation type.
+
+## Architecture
+
+```
+src/Capability/<ModuleName>/Presentation/<Type>/
+  └── <ModuleName><Type>OpenAPI.yaml  # Module-specific paths & schemas
+
+openapi/
+  ├── components/
+  │   ├── schemas/common.yaml         # Shared schemas (ErrorResponse, Pagination, etc.)
+  │   ├── security.yaml               # Security schemes
+  │   └── parameters.yaml             # Common parameters
+  ├── info-<type>.yaml                # API info per presentation type
+  └── openapi-<type>.yaml             # Generated merged files (Http, FrontendApi, BackendApi)
+```
+
+## File Structure
+
+### Shared Components (`openapi/components/`)
+
+Shared components are defined once and reused across all modules:
+
+- **`schemas/common.yaml`**: Common schemas like `ErrorResponse`, `Pagination`, `ProblemDetail` (RFC 7807)
+- **`security.yaml`**: Security schemes (`BearerAuth`, etc.)
+- **`parameters.yaml`**: Common parameters (`Page`, `PageSize`, `EntityId`, etc.)
+
+### Module Files
+
+Each module's OpenAPI file contains only module-specific content:
+
+**Location**: `src/Capability/<ModuleName>/Presentation/<Type>/<ModuleName><Type>OpenAPI.yaml`
+
+**Content**:
+- `paths`: All endpoints for this module
+- `components.schemas`: Module-specific schemas only
+- `tags`: Module-specific tags (optional)
+
+**Example** (`src/Capability/Badges/Presentation/Http/BadgesOpenAPI.yaml`):
+```yaml
+# Badges Module - HTTP API
+# This file contains only module-specific paths and schemas.
+# Shared components (ErrorResponse, Pagination, etc.) are referenced via $ref.
+
+paths:
+  /badges:
+    get:
+      # ... endpoint definition
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListBadgesResponse'
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '../../../../../../openapi/components/schemas/common.yaml#/components/schemas/ProblemDetail'
+
+components:
+  schemas:
+    Badge:
+      # Module-specific schema
+    CreateBadgeRequest:
+      # Module-specific schema
+    ListBadgesResponse:
+      # Module-specific schema
+```
+
+### Info Files
+
+Separate info files for each presentation type:
+
+- **`info-http.yaml`**: Info, servers, tags for HTTP API (public endpoints)
+- **`info-frontend-api.yaml`**: Info, servers, tags for Frontend API (frontend-optimized endpoints)
+- **`info-backend-api.yaml`**: Info, servers, tags for Backend API (admin/system endpoints)
+
+## Naming Conventions
+
+### Module Files
+- Http: `<ModuleName>OpenAPI.yaml` (e.g., `DomainDocumentationOpenAPI.yaml`)
+- FrontendApi: `<ModuleName>FrontendApiOpenAPI.yaml` (e.g., `CommentsFrontendApiOpenAPI.yaml`)
+- BackendApi: `<ModuleName>BackendApiOpenAPI.yaml`
+
+### Presentation Types
+- `Http`: Public REST API endpoints
+- `FrontendApi`: Frontend-specific endpoints (may include aggregations, simplified responses)
+- `BackendApi`: Administrative/backend endpoints (may include bulk operations, system data)
+
+## Using Shared Components
+
+Reference shared components using relative `$ref` paths:
+
+```yaml
+# Reference shared schema
+schema:
+  $ref: '../../../../../../openapi/components/schemas/common.yaml#/components/schemas/ErrorResponse'
+
+# Reference shared parameter
+parameters:
+  - $ref: '../../../../../../openapi/components/parameters.yaml#/components/parameters/Page'
+
+# Reference shared security scheme
+security:
+  - $ref: '../../../../../../openapi/components/security.yaml#/components/securitySchemes/BearerAuth'
+```
+
+The merge script resolves these references to `#/components/...` in the final output.
+
+## Building the Documentation
+
+### Automatic Merge
+
+Run the merge script to generate consolidated OpenAPI specs:
+
+```bash
+# Merge all types
+php scripts/merge-openapi.php
+
+# Merge specific type only
+php scripts/merge-openapi.php --type=http
+php scripts/merge-openapi.php --type=frontend-api
+php scripts/merge-openapi.php --type=backend-api
+
+# Dry run (no files written)
+php scripts/merge-openapi.php --dry-run
+```
+
+### Output Files
+
+The script generates:
+- `openapi/openapi-http.yaml`: Complete HTTP API specification
+- `openapi/openapi-frontend-api.yaml`: Complete Frontend API specification
+- `openapi/openapi-backend-api.yaml`: Complete Backend API specification
+
+### What the Merge Script Does
+
+1. **Discovers** module OpenAPI files in `src/Capability/*/Presentation/*/` by presentation type
+2. **Loads** corresponding `info-<type>.yaml` for API metadata
+3. **Merges** all module paths (detects conflicts)
+4. **Merges** all module schemas (deduplicates by name)
+5. **Merges** all tags from modules and info files
+6. **Resolves** `$ref` references to shared components
+7. **Validates** the merged specification
+8. **Outputs** the final OpenAPI YAML files
+
+## Adding New Module Endpoints
+
+### 1. Create/Update Module File
+
+Create or update the module's OpenAPI file:
+
+```bash
+# For Http presentation
+touch src/Capability/MyModule/Presentation/Http/MyModuleOpenAPI.yaml
+```
+
+### 2. Add Module-Specific Content
+
+Only include module-specific paths and schemas:
+
+```yaml
+# MyModuleOpenAPI.yaml
+paths:
+  /my-endpoints:
+    get:
+      summary: List my resources
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyResponse'
+        '400':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '../../../../../../openapi/components/schemas/common.yaml#/components/schemas/ProblemDetail'
+
+components:
+  schemas:
+    MyResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MyResource'
+    MyResource:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+```
+
+### 3. Use Shared Components
+
+Reference shared components for consistency:
+
+```yaml
+parameters:
+  - $ref: '../../../../../../openapi/components/parameters.yaml#/components/parameters/Page'
+  - $ref: '../../../../../../openapi/components/parameters.yaml#/components/parameters/PageSize'
+```
+
+### 4. Rebuild Documentation
+
+```bash
+php scripts/merge-openapi.php
+```
+
+## Best Practices
+
+### Module Organization
+- Keep module files focused on module-specific functionality
+- Use shared components for common patterns
+- Document complex business logic in operation descriptions
+
+### Schema Design
+- Use consistent naming (camelCase for properties)
+- Include examples for all request/response schemas
+- Reference shared schemas where appropriate
+
+### Error Handling
+- Use RFC 7807 Problem Details for HTTP APIs
+- Include appropriate error codes and descriptions
+- Document validation errors clearly
+
+### Versioning
+- Module APIs can evolve independently
+- Use semantic versioning in info files
+- Document breaking changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Path conflicts**: Same endpoint path defined in multiple modules
+- Solution: Review and consolidate overlapping functionality
+
+**Schema conflicts**: Same schema name used differently across modules
+- Solution: Use module-specific naming (e.g., `Badge` vs `DomainBadge`)
+
+**Reference errors**: `$ref` paths not resolving
+- Solution: Check relative paths and ensure shared components exist
+
+### Validation
+
+Use OpenAPI tools to validate merged specs:
+
+```bash
+# Install validator
+npm install -g @apidevtools/swagger-cli
+
+# Validate spec
+swagger-cli validate openapi/openapi-http.yaml
+```
+
+## Integration with CI/CD
+
+Add to your CI/CD pipeline:
+
+```yaml
+# .github/workflows/api-docs.yml
+name: Update API Documentation
+on:
+  push:
+    paths:
+      - 'src/Capability/**/Presentation/**/*.yaml'
+      - 'openapi/components/**/*.yaml'
+      - 'scripts/merge-openapi.php'
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Install dependencies
+        run: composer install --no-dev
+      - name: Merge OpenAPI specs
+        run: php scripts/merge-openapi.php
+      - name: Commit changes
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add openapi/openapi-*.yaml
+          git commit -m 'Update API documentation' || echo "No changes to commit"
+          git push
+```
+
+This ensures API documentation stays up-to-date with code changes.

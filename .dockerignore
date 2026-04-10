@@ -1,0 +1,13 @@
+.git
+.github
+**/[Bb]in/
+**/[Oo]bj/
+**/.vs/
+**/.vscode/
+**/*.user
+**/*.suo
+.aspire/
+TestResults/
+**/TestResults/
+*.log
+CSharpModulith.sln.DotSettings.user

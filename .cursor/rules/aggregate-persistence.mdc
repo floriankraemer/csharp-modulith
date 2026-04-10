@@ -1,0 +1,161 @@
+---
+description: Aggregate Persistence
+alwaysApply: true
+---
+
+# Aggregate Persistence
+
+`<AggregateName>`  is the placeholder in this document of the aggregate name you are going to implement.
+
+## Aggregate Conventions
+
+- Aggregates must be persisted trough a repository implementing an interface that provides these methods:
+  - `persist(<AggregateClassName> $<AggregateName>): void;`
+  - `restore(<AggregateIdClassName> $<AggregateName>Id): ?<AggregateClassName>;`
+  - `remove(<AggregateIdClassName> $<AggregateName>Id): void`
+  - `generateId(): <AggregateName>Id` — MUST always return a new aggregate ID and MUST NOT return `null` (nullable return types for this method were incorrect).
+  - Implementations typically delegate to `UuidGeneratorInterface` (or equivalent) and wrap the result in the ID value object; use cases MUST NOT null-check `generateId()`.
+  - This interface MUST NOT have additional methods.
+- The repository MUST be placed in `src/Capability/<CapabilityName>/Domain/Repositories/<AggregateName>WriteRepositoryInterface.php`
+- An aggregate SHOULD implement `\JsonSerializable` (see https://www.php.net/manual/en/class.jsonserializable.php) and recursivly serialze the whole object to JSON
+- Tests for the aggregate MUST be placed in `tests/Capability/<CapabilityName>/Domain/Model/<AggregateName>`
+
+## Aggregate Respository Implementation
+
+- The repository implementation MUST be placed in `src/Capability/<CapabilityName>/Infrastructure/Persistence/<PersistenceType>/<AggregateName>WriteRepository.php`.
+- The write repository orchestrates **transactions**, **query execution**, **mapper calls**, and **domain event publishing** only. It MUST NOT contain aggregate mapping logic (no `new Aggregate(...)`, no hand-built row arrays from aggregate fields, no `ObjectAccessor` usage in the repository class).
+- Aggregate **construction and deconstruction** (object ↔ array for persistence) MUST live in `<AggregateName>Mapper.php` under `Mapper/`, using `App\Shared\Infrastructure\ObjectAccessor\ObjectAccessorFactoryInterface` and `App\Shared\Infrastructure\ObjectAccessor\ObjectAccessorInterface`. Treat deep graphs recursively as needed.
+- That mapper is **only** for the write/restore path of the domain aggregate. Do **not** use it for Application read models; read-side mapping is defined in `read-models.mdc` (constructor-based mappers, separate classes).
+- Persisting the data of the whole aggregate MUST be wrapped into a transction to ensure the whole aggregate is saved.
+- When an aggregate is deleted all of its related data MUST be deleted unless specified otherwise.
+- The repository MUST use `App\Shared\Infrastructure\Persistence\QueryBuilder\QueryBuilderFactoryInterface` to create query builders.
+- All database operations (INSERT, UPDATE, DELETE) MUST be performed using query builders, not directly through the connection.
+- The repository MUST have a private method `createQueryBuilder()` that uses the query builder factory to create the appropriate query builder instance.
+
+### Aggregate mapper (write path)
+
+- Naming: `<AggregateName>Mapper` next to the write repository (e.g. `fromArrayToObject`, `fromObjectToArray` or project-equivalent).
+- Implements all ObjectAccessor-driven mapping for that aggregate; the write repository only passes rows or aggregates to this mapper.
+
+## Examples
+
+### Repository Example
+
+```php
+declare(strict_types=1);
+
+namespace App\Capability\Badges\Infrastructure\Persistence\Doctrine;
+
+use App\Capability\Badges\Domain\Model\Badge\Badge;
+use App\Capability\Badges\Domain\Model\Badge\BadgeId;
+use App\Capability\Badges\Domain\Repositories\BadgeWriteRepositoryInterface;
+use App\Capability\Badges\Infrastructure\Persistence\Doctrine\Mapper\BadgeMapper;
+use App\Capability\Badges\Infrastructure\Persistence\Doctrine\QueryBuilder\BadgeQueryBuilder;
+use App\Shared\Application\UuidGenerator\UuidGeneratorInterface;
+use App\Shared\Infrastructure\EventBus\DomainEventPublisherInterface;
+use App\Shared\Infrastructure\Persistence\QueryBuilder\QueryBuilderFactoryInterface;
+use Doctrine\DBAL\Connection;
+
+readonly class BadgeWriteRepository implements BadgeWriteRepositoryInterface
+{
+    private const string TABLE_NAME = 'badge';
+
+    public function __construct(
+        private Connection $connection,
+        private BadgeMapper $badgeMapper,
+        private DomainEventPublisherInterface $domainEventPublisher,
+        private UuidGeneratorInterface $uuidGenerator,
+        private QueryBuilderFactoryInterface $queryBuilderFactory
+    ) {
+    }
+
+    public function persist(Badge $badge): void
+    {
+        $data = $this->badgeMapper->fromObjectToArray($badge);
+
+        $this->connection->transactional(function () use ($badge, $data): void {
+            $exists = $this->findCount((string)$badge->getBadgeId()) > 0;
+
+            if (!$exists) {
+                $this->createQueryBuilder()
+                    ->insert(self::TABLE_NAME)
+                    ->values($data)
+                    ->executeStatement();
+                return;
+            }
+
+            $this->createQueryBuilder()
+                ->update(self::TABLE_NAME)
+                ->setValues($data)
+                ->andWhere('id = :id')
+                ->setParameter('id', (string)$badge->getBadgeId())
+                ->executeStatement();
+        });
+
+        $this->domainEventPublisher->publishFromAggregate($badge);
+    }
+
+    public function restore(BadgeId $badgeId): ?Badge
+    {
+        $data = $this->createQueryBuilder()
+            ->select('*')
+            ->from(self::TABLE_NAME)
+            ->where('id = :id')
+            ->setParameter('id', (string)$badgeId)
+            ->fetchAssociative();
+
+        if (!$data) {
+            return null;
+        }
+
+        return $this->badgeMapper->fromArrayToObject($data);
+    }
+
+    public function remove(Badge $badge): void
+    {
+        $badgeId = $badge->getBadgeId();
+        $badge->delete();
+
+        $this->connection->transactional(function () use ($badgeId): void {
+            $this->createQueryBuilder()
+                ->delete('badge_assignment')
+                ->where('badge_id = :badgeId')
+                ->setParameter('badgeId', (string)$badgeId)
+                ->executeStatement();
+
+            $this->createQueryBuilder()
+                ->delete(self::TABLE_NAME)
+                ->where('id = :id')
+                ->setParameter('id', (string)$badgeId)
+                ->executeStatement();
+        });
+
+        $this->domainEventPublisher->publishFromAggregate($badge);
+    }
+
+    public function generateId(): BadgeId
+    {
+        return BadgeId::fromString($this->uuidGenerator->generateV7());
+    }
+
+    private function findCount(string $badgeId): int
+    {
+        $result = $this->createQueryBuilder()
+            ->select('COUNT(*) as count')
+            ->from(self::TABLE_NAME)
+            ->where('id = :id')
+            ->setParameter('id', $badgeId)
+            ->fetchAssociative();
+
+        return $result ? (int)$result['count'] : 0;
+    }
+
+    private function createQueryBuilder(): BadgeQueryBuilder
+    {
+        $queryBuilder = $this->queryBuilderFactory->fromClassName(BadgeQueryBuilder::class);
+        assert($queryBuilder instanceof BadgeQueryBuilder);
+
+        return $queryBuilder;
+    }
+}
+```
