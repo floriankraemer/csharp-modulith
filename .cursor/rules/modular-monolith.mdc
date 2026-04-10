@@ -1,202 +1,186 @@
 ---
 description: Modular Monolith Architecture Rules
 alwaysApply: true
-globs: 
+globs:
 ---
 
-# Application Level Folder & File Structure
+# Solution & folder layout
 
 ```text
 src/
-|-- AppException.php                              # Module base exception
-|-- AppConfig.php                                 # Module specific configuration
-|-- Capability/                                   # All business capabilities / modules
+|-- CSharpModulith.Shared/                    # Shared kernel (class library)
+|-- CSharpModulith.Capability.<CapabilityName>/  # One class library per capability
+|-- CSharpModulith.Host/                      # ASP.NET Core host: composition root, HTTP pipeline
+|-- CSharpModulith.AppHost/                   # .NET Aspire app host (orchestration)
+|-- CSharpModulith.ServiceDefaults/           # Shared service defaults (OpenTelemetry, health, etc.)
 ```
+
+- **Capabilities** live in `src/CSharpModulith.Capability.<CapabilityName>/` (one `.csproj` per capability).
+- **Shared kernel** lives in `src/CSharpModulith.Shared/`.
+- **Host**, **AppHost**, and **ServiceDefaults** are composition and platform; they are **not** business capabilities.
+
+Capability tests: `tests/Capability/<CapabilityName>/CSharpModulith.Capability.<CapabilityName>.Tests/`.
+
+# Physical paths vs root namespaces
+
+- **Physical project / folder**: `CSharpModulith.Shared`, `CSharpModulith.Capability.<CapabilityName>` (matches `.csproj` names under `src/`).
+- **Default root namespace** (set in each `.csproj` via `RootNamespace`):
+  - Shared: `App.Shared`
+  - Capability: `App.Capability.<CapabilityName>`
+- Inner folders extend the root namespace (e.g. `Application` → `App.Capability.Order.Application`). Do **not** use `CSharpModulith.Capability.Order` as the C# namespace unless you deliberately change `RootNamespace`.
 
 # Modules
 
-- Modules must be placed in `src/Capability`.
-- All business capabilities, also called modules, must be placed in `src/Capability`.
+- Every business capability is a separate project under `src/CSharpModulith.Capability.<CapabilityName>/`.
+- Capability projects reference `CSharpModulith.Shared` when they need shared types.
 
-## Module Base Classes
+## Module base types
+
+At the capability project root (or a documented single folder), keep module-wide types discoverable:
 
 ```text
-src/
-|-- Capability/                                   # All business capabilities / modules
-|   |-- <Name>/                                   # Root of the capability
-|   |   |-- <Name>Exception.php                   # Module base exception
-|   |   |-- <Name>Failure.php                     # Error Codes
-|   |   |-- <Name>Config.php                      # Module specific configuration
+src/CSharpModulith.Capability.<Name>/
+|-- <Name>Exception.cs              # Module base exception
+|-- <Name>Failure.cs                # Error codes / failure taxonomy
+|-- <Name>Config.cs                 # Module-specific configuration (optional)
 ```
 
 # Facades
 
-- Facades must be placed in the application layer of a module `src/Capability/<moduleName>/Application/` and prefixed with the module name, e.g. `UserFacade`.
-- Facade methods must have only one transfer object as argument that is placed in `Application/Transfers` in the module.
-  - Transfer objects must use the suffix "Request".
-  - Use the visibility scope propagation in the constructor to make the properties public.
-- Facade methods should return a transfer object suffixed with "Result" when needed.
-  - The result object must have a `isSuccessful` property that returns a boolean.
-  - The result object should be readonly.
-- You MUST NOT catch exceptions in the facades unless explicitly specified.
+- Facade **contracts** belong in `src/CSharpModulith.Capability.<moduleName>/Application/`, named `<Name>FacadeInterface` (or `<Name>Facade` if you use a concrete entry type). Do **not** use the `I` prefix for interfaces; use an `Interface` suffix instead.
+- Facade methods follow [facade-design.mdc](facade-design.mdc) (Requests/Responses, primitives, `WithSuccess` / `WithFailure` patterns).
+- You MUST NOT catch exceptions in facades unless explicitly specified.
 
 # Layers
 
-## Application Layer
+## Application layer
 
-- Each module MUST have an "Application", "Domain" and "Infrastructure" folder.
-- A facade CAN use use case input and result objects if it just delegates to a use case.
-- A facade method that does NOT delegate to a use case must use its Input and Result transfers from `Transfers` folder.
-- Queries contains sub-folders that are named after the data they present, they are also called a view.
-- Repository interfaces for the queries are in  `src/Capability/<moduleName>/Application/Repositories`.
-- Interfaces for the queries are in  `src/Capability/<moduleName>/Application/Repositories`.
-- Folders inside the application layer SHOULD be in plural form.
-- The application layer MUST NOT have dependenices on 3rd party libraries unless explicitly specified.
-- You MUST NOT catch exceptions in the use cases unless explicitly specified.
-- Bridge interfaces to other modules are in `src/Capability/<moduleName>/Application/Bridges`
+- Each capability project MUST have **Application**, **Domain**, and **Infrastructure** folders (Presentation is optional until you expose HTTP/UI from the capability).
+- A facade MAY use use-case input/result types when it only delegates to a use case.
+- A facade method that does **not** delegate to a use case MUST use Request/Response types from `Application/Requests` and `Application/Responses` (see facade-design).
+- **Queries**: subfolders named after the read data they represent (views).
+- Read-repository interfaces: `src/CSharpModulith.Capability.<moduleName>/Application/Repositories/`.
+- Folders inside the application layer SHOULD be plural where they denote collections of things (`UseCases`, `Repositories`, …).
+- The application layer MUST NOT take unnecessary dependencies on infrastructure; keep references minimal. Domain MUST remain free of infrastructure.
+- You MUST NOT catch exceptions in use cases unless explicitly specified.
+- Bridge interfaces to other capabilities: `src/CSharpModulith.Capability.<moduleName>/Application/Bridges/`.
 
-### Application Layer Folder Structure
+### Application layer folder structure
 
 ```text
-src/
-|-- Capability/                                      # All business capabilities / modules
-|   |-- <Name>/                                      # Root of the capability
-|   |   |-- Application/                             # Application layer (ports)
-|   |   |   |-- UseCases/                            # Use Cases / "Application services"
-|   |   |   |   |-- <UCName>/                        # Use Case folder by its name.
-|   |   |   |   |   |-- <UCName>.php                 # The use case file by its name.
-|   |   |   |   |   |-- <UCName>Input.php            # The input DTO for facades & use cases
-|   |   |   |   |   |-- <UCName>Result.php           # The result object for facades & use cases
-|   |   |   |-- Repositories/                        # Read-repository interfaces
-|   |   |   |-- -- <Name>ReadRepositoryInterface.php # External Event Handler (Integration Events)
-|   |   |   |-- Queries/                             # The objects the read repository returns
-|   |   |   |   |-- <QueryName>/                     # The query name (e.g. "ShoppingCartView")
-|   |   |   |   |   |-- <QueryName>.php              # The query by its name.
-|   |   |   |-- IntegrationEventHandlers/            # External Event Handler (Integration Events)
-|   |   |   |-- DomainEventHandlers/                 # Domain internal Event Handlers
-|   |   |   |-- Jobs/                                # Long running async Background Jobs
-|   |   |   |   |-- <JobName>Handler.php             # Job Handler handling jobs.
-|   |   |   |   |-- <JobName>Job.php                 # The job object.
-|   |   |   |-- Bridges/                             # The bridge interfaces.
-|   |   |   |   |-- <ExtName>BridgeInterface.php     # A bridge interface.
-|   |   |   |-- Services/                            # Application Layer services
-|   |   |   |-- Requests/                            # Request / Input objects for facades methods
-|   |   |   |-- Responses/                           # Response / Return objects for facade methods
-|   |   |   |-- <Name>Facade.php                     # Entry point for the module
-|   |   |   |-- <Name>FacadeInterface.php            # Entry point for the module
-|   |   |   |-- <Name>ApplicationException           # Application Layer Base Exception for the module
+src/CSharpModulith.Capability.<Name>/
+|-- Application/
+|   |-- UseCases/
+|   |   |-- <UCName>/
+|   |   |   |-- <UCName>.cs
+|   |   |   |-- <UCName>Input.cs
+|   |   |   |-- <UCName>Result.cs
+|   |-- Repositories/
+|   |   |-- <Name>ReadRepositoryInterface.cs
+|   |-- Queries/
+|   |   |-- <QueryName>/
+|   |   |   |-- <QueryName>.cs
+|   |-- IntegrationEventHandlers/
+|   |-- DomainEventHandlers/
+|   |-- Jobs/
+|   |   |-- <JobName>Handler.cs
+|   |   |-- <JobName>Job.cs
+|   |-- Bridges/
+|   |   |-- <ExtName>BridgeInterface.cs
+|   |-- Services/
+|   |-- Requests/
+|   |-- Responses/
+|   |-- <Name>FacadeInterface.cs
+|   |-- <Name>ApplicationException.cs
 ```
 
-## Domain Layer
+## Domain layer
 
-- Domain Events must be placed in `src/Capability/<moduleName>/Domain/Model/<Aggregate>/Events`
-- The DDD tactical patterns must be used in the Domain layer.
-- The aggregates, value objects and entities must be placed in `src/Capability/<moduleName>/Domain/Model/<Aggregate>`.
-  - One aggregate must have one aggregate folder.
-  - Aggregates must not share objects.
-- An aggregate must have an ID object that has the same name as the aggregate with the suffix "Id".
-  - The id object must implement a `fromString` and `__toString` method.
-- An aggregate must have a static create() except there is a better name matching the ubiquitous language.
-- The domain layer layer MUST NOT have dependenices on 3rd party libraries unless explicitly specified.
+- Domain events: `src/CSharpModulith.Capability.<moduleName>/Domain/Model/<Aggregate>/Events/`.
+- Use DDD tactical patterns in the Domain layer.
+- Aggregates, value objects, and entities: `src/CSharpModulith.Capability.<moduleName>/Domain/Model/<Aggregate>/`.
+  - One aggregate root per aggregate folder.
+  - Aggregates must not share domain objects across aggregate boundaries (reference other aggregates by id only).
+- An aggregate has an ID type named `<Aggregate>Id` (e.g. `OrderId`).
+  - Prefer immutable ID types with a clear factory (e.g. `static OrderId From(string value)`) and stable string representation.
+- Prefer a static factory (e.g. `Create`) for construction unless the ubiquitous language suggests another name.
+- The domain layer MUST NOT depend on infrastructure or host frameworks.
 - You MUST NOT catch exceptions in the domain layer unless explicitly specified.
 
-### Domain Layer Folder Structure
+### Domain layer folder structure
 
 ```text
-src/
-|-- Capability/                                   # All business capabilities / modules
-|   |-- <Name>/                                   # Root of the capability
-|   |   |-- Domain/                               # Domain layer (pure business logic)
-|   |   |   |-- Model/                            # Domain model(s)
-|   |   |   |   |-- <Aggregate>/                  # Aggregate sub-folder, name of the aggreate
-|   |   |   |   |   |-- Events/                   # Domain events the aggregate emits
-|   |   |   |   |   |-- <Entity>.php/             # Entities for domain models
-|   |   |   |   |   |-- <ValueObject>.php         # Value objects for aggregates
-|   |   |   |-- Services/                         # Domain-specific services
-|   |   |   |-- Repositories/                     # Contains the repository interfaces.
-|   |   |   |   |-- <Name>RepositoryInterface     # Write Repository Interface
+src/CSharpModulith.Capability.<Name>/
+|-- Domain/
+|   |-- Model/
+|   |   |-- <Aggregate>/
+|   |   |   |-- Events/
+|   |   |   |-- <Entity>.cs
+|   |   |   |-- <ValueObject>.cs
+|   |-- Services/
+|   |-- Repositories/
+|   |   |-- <Name>WriteRepositoryInterface.cs
 ```
 
-## Infrastructure Layer
+## Infrastructure layer
 
-- Repositories MUST implement an interface that is placed 
-  - is placed in `src/Capability/<Name>/Application/Repositories`.
-  - is placed in `src/Capability/<Name>/Domain/Repositories`.
-- Repositories MUST be placed in `src/Capability/<Name>/Infrastructure/Persistence/<PersistenceType>/`, where `<PersistenceType>` is the choosen technology, e.g. "Doctrine", or "Doctrine/DBAL", "Doctrine/ORM" etc
-- **Persistence style:** Write repositories follow `aggregate-persistence.mdc` (query builders + `<AggregateName>Mapper` using `ObjectAccessor` for aggregates only). Read repositories follow `read-models.mdc` (query builders + read mappers that instantiate read models via constructors). Repositories MUST NOT inline mapping logic for aggregates or read models.
+- Repository implementations implement interfaces declared in:
+  - `src/CSharpModulith.Capability.<Name>/Application/Repositories/` (reads), and/or
+  - `src/CSharpModulith.Capability.<Name>/Domain/Repositories/` (writes), per your module’s split.
+- Place adapters under `src/CSharpModulith.Capability.<Name>/Infrastructure/Persistence/<Technology>/` (e.g. `EfCore`, `Dapper`) and related concerns (`Message/`, `Bridges/`, …).
+- **Persistence:** Follow [aggregate-persistence.mdc](aggregate-persistence.mdc) and [read-models.mdc](read-models.mdc) for mapping and repository shape; keep aggregate mapping out of inline repository spaghetti.
 
-### Infrastructure Layer Folder Structure
+### Infrastructure layer folder structure
 
 ```text
-src/
-|-- Capability/                                   # All business capabilities / modules
-|   |-- <Name>/                                   # Root of the capability
-|   |   |-- Infrastructure/                       # Infrastructure layer (adapters, driven)
-|   |   |   |-- Persistence/                      # Database repositories and configurations
-|   |   |   |-- |-- Schema/                       # Database schema files
-|   |   |   |-- Dependencies/                     # External dependency management
-|   |   |   |-- Message/                          # Messaging systems (e.g., events, queues)
-|   |   |   |-- Email/                            # Email integration (for example)
-|   |   |   |-- Bridges/                          # Bridge implementations
-|   |   |       |-- <OtherModuleName>Bridge.php   # Bridge implementation to other capability
-|   |   |-- Presentation/                         # Presentation layer (adapters, driver)
+src/CSharpModulith.Capability.<Name>/
+|-- Infrastructure/
+|   |-- Persistence/
+|   |   |-- <Technology>/
+|   |   |-- Schema/
+|   |-- Dependencies/
+|   |-- Message/
+|   |-- Email/
+|   |-- Bridges/
+|   |   |-- <OtherModuleName>Bridge.cs
+|-- Presentation/
 ```
 
-## Presentation Layer
+## Presentation layer
 
-- The presentation layers responsibility is to map the data from a use case to a client.
-- You MUST NOT do authentication or authorization checks in the presentation layer.
-- API controllers MUST be placed in `src/Capability/<moduleName>/Presentation/<type>/Controller/Api`
-- Controllers MUST implement only one method __invoke() and one use case per controller.
-- The presentation layer MUST be placed in `src/Capability/<moduleName>/Presentation`
-- The presentation layer MUST have a `src/Capability/<moduleName>/Presentation/<type>/ViewModel` folder that contains the view models.
-- The presentation layer MUST place mappers in the `src/Capability/<moduleName>/Presentation/<type>/Mapper` folder.
-- The presentation layer MUST place validators in the `src/Capability/<moduleName>/Presentation/<type>/Constraints` folder.
-- The presentation layer MUST place request DTOs in the `src/Capability/<moduleName>/Presentation/<type>/Requests` folder.
-- Controllers MUST implement an `__invoke()` method.
-- Controllers MUST inject the `App\Shared\Presentation\Http\ApiResponseFactoryInterface` as $apiResponse and use it to return the according response.
-- Controllers MUST implement a request DTO using this notation `<controllerName>RequestPayload.php`.
-  - The DTO MUST use Symfony validator attributes to validate the request.
-  - The DTO CAN have nested objects, implemented in the same folder.
-  - The DTO MUST be mapped to the use case input object via a mapper.
-- You MUST NOT catch exceptions in the controllers unless explicitly specified.
-- Validation errors of invalid inputs MUST return HTTP Status 422 and a problem details response.
-- DELETE requests SHOULD be idempotent and always return 204 no content and no body.
+- Presentation maps use-case results to HTTP, CLI, or other delivery mechanisms.
+- **Authorization:** enforce authentication/authorization in the ASP.NET Core pipeline (middleware, authorization policies, filters)—not ad-hoc checks scattered through mapping code. Capability `Presentation` types stay thin.
+- HTTP endpoints MAY be registered from `CSharpModulith.Host` (minimal APIs) and/or from types under `src/CSharpModulith.Capability.<moduleName>/Presentation/` (e.g. extension methods that map routes). Prefer one clear pattern per API surface.
+- Keep **one primary operation per endpoint** (one use case or one query) to preserve clear boundaries.
+- The presentation layer lives under `src/CSharpModulith.Capability.<moduleName>/Presentation/`.
+- Use subfolders per surface, for example:
+  - `Presentation/<Surface>/ViewModels/` — response shapes
+  - `Presentation/<Surface>/Mappers/` — mapping to view models
+  - `Presentation/<Surface>/Validators/` or FluentValidation — input validation
+  - `Presentation/<Surface>/Requests/` — request DTOs
+- OpenAPI: module or host-owned YAML under `openapi/` or next to the API project, per [openapi.mdc](openapi.mdc).
+- You MUST NOT catch exceptions in endpoint handlers unless explicitly specified; rely on centralized exception handling (see [http-api-controller-exceptions.mdc](http-api-controller-exceptions.mdc)).
+- Validation failures SHOULD produce **422** with a problem-details body where the API follows [api-conventions.mdc](api-conventions.mdc).
+- Successful **DELETE** SHOULD be idempotent; **204 No Content** with an empty body is appropriate when the resource is gone.
 
-### Presentation Layer Folder Structure
+### Presentation layer folder structure
 
 ```text
-src/
-|-- Capability/                                   # All business capabilities / modules
-|   |-- <Name>/                                   # Root of the capability
-|   |   |-- Presentation/                         # Presentation layer (adapters, driver)
-|   |   |   |-- CommandLine/                      # Command Line Interface
-|   |   |   |   |-- ConsoleCommands/              # Console Commands
-|   |   |   |   |-- ViewModels/                   # View model objects
-|   |   |   |   |-- ViewMappers/                  # Mappers to map the data to desired outputs
-|   |   |   |-- FrontendApi/                      # JSON API
-|   |   |   |   |-- Controllers/                  # Controllers
-|   |   |   |   |-- Requests/                     # Request DTOs
-|   |   |   |   |-- ViewModels/                   # View model objects
-|   |   |   |   |-- ViewMappers/                  # Mappers to map the data to desired outputs
-|   |   |   |   |-- <Name>FrontendApiOpenAPI.yaml # API documentation
-|   |   |   |-- BackendApi/                       # JSON API
-|   |   |   |   |-- Controllers/                  # Controllers
-|   |   |   |   |-- Requests/                     # Request DTOs
-|   |   |   |   |-- ViewModel/                    # View model objects
-|   |   |   |   |-- ViewMapper/                   # Mappers to map the data to desired outputs
-|   |   |   |   |-- <Name>BackendApiOpenAPI.yaml  # API documentation
-|   |   |   |-- <Name>PresentationException.php   # Presentation Layer Base Exception
+src/CSharpModulith.Capability.<Name>/
+|-- Presentation/
+|   |-- CommandLine/
+|   |   |-- ConsoleCommands/
+|   |   |-- ViewModels/
+|   |   |-- ViewMappers/
+|   |-- Http/                        # or FrontendApi / BackendApi if you split surfaces
+|   |   |-- Endpoints/               # optional: route registration helpers
+|   |   |-- Requests/
+|   |   |-- ViewModels/
+|   |   |-- Mappers/
+|   |-- <Name>PresentationException.cs
 ```
 
-# Shared Kernel
+# Shared kernel
 
-- The shared kernel in `src/Shared` provides shared functionality that can be used by multiple modules.
-- Use the classes from it in the according layers if you see a need for them.
-
-
-
-
-
-
-
+- The shared kernel is project `src/CSharpModulith.Shared/` with root namespace `App.Shared`.
+- Use it for cross-cutting types and abstractions that truly belong in the kernel—not as a dump for capability-specific logic.

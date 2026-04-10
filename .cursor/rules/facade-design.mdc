@@ -4,8 +4,8 @@ alwaysApply: true
 
 # Facade Design
 
-- Facades MUST have no argument or only one argument that follows the pattern `src/Capability/<CapabilityName>/Application/Requests/<MethodName>Request.php`
-- Facades MUST have void or only one return type that follows the pattern `src/Capability/<CapabilityName>/Application/Responses/<MethodName>Response.php`
+- Facades MUST have no argument or only one argument that follows the pattern `src/CSharpModulith.Capability.<CapabilityName>/Application/Requests/<MethodName>Request.php`
+- Facades MUST have void or only one return type that follows the pattern `src/CSharpModulith.Capability.<CapabilityName>/Application/Responses/<MethodName>Response.php`
 - Those objects must take only primitives
 - Those objects must be read only and final
 - Facades SHOULD favor broad interfaces over concrete methods, e.g. batch over single operations if feasible
