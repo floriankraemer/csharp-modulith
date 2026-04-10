@@ -5,10 +5,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.2.1" />
+    <PackageReference Include="Aspire.RabbitMQ.Client" Version="13.2.1" />
+    <PackageReference Include="CommunityToolkit.Aspire.Microsoft.Data.Sqlite" Version="13.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CSharpModulith.ServiceDefaults\CSharpModulith.ServiceDefaults.csproj" />
     <ProjectReference Include="..\CSharpModulith.Shared\CSharpModulith.Shared.csproj" />
-    <ProjectReference Include="..\Capability\Order\CSharpModulith.Capability.Order\CSharpModulith.Capability.Order.csproj" />
-    <ProjectReference Include="..\Capability\Payment\CSharpModulith.Capability.Payment\CSharpModulith.Capability.Payment.csproj" />
+    <ProjectReference Include="..\CSharpModulith.Capability.Order\CSharpModulith.Capability.Order.csproj" />
+    <ProjectReference Include="..\CSharpModulith.Capability.Payment\CSharpModulith.Capability.Payment.csproj" />
   </ItemGroup>
 
 </Project>

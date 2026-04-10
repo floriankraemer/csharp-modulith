@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Capability\Order\CSharpModulith.Capability.Order\CSharpModulith.Capability.Order.csproj" />
+    <ProjectReference Include="..\..\..\..\src\CSharpModulith.Capability.Order\CSharpModulith.Capability.Order.csproj" />
   </ItemGroup>
 
 </Project>

@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Capability\Payment\CSharpModulith.Capability.Payment\CSharpModulith.Capability.Payment.csproj" />
+    <ProjectReference Include="..\..\..\..\src\CSharpModulith.Capability.Payment\CSharpModulith.Capability.Payment.csproj" />
   </ItemGroup>
 
 </Project>

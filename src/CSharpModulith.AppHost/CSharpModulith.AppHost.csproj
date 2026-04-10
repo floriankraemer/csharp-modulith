@@ -8,6 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.2.1" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.2.1" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.MailPit" Version="13.1.1" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Sqlite" Version="13.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CSharpModulith.Host\CSharpModulith.Host.csproj" />
   </ItemGroup>
 
