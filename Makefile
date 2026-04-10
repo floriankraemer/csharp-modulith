@@ -28,6 +28,7 @@ help:
 	@echo "  make run     Build (if needed) and start the stack in the foreground"
 	@echo "  make up      Build and start in detached mode (host + csharp SDK container)"
 	@echo "  SDK tooling: docker compose exec -T csharp dotnet test CSharpModulith.sln -c Release"
+	@echo "  ArchUnitNET layer tests: tests/Architecture/CSharpModulith.Architecture.Tests (prefer -c Debug per ArchUnitNET docs)"
 	@echo "  make down    Stop and remove containers"
 	@echo "  make logs    Follow compose logs (use after make up)"
 	@echo ""

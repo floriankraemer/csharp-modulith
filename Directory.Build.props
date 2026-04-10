@@ -4,6 +4,5 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <!-- TODO(Option B): Add NetArchTest or CI dependency rules to enforce layer boundaries inside each capability. -->
   </PropertyGroup>
 </Project>
