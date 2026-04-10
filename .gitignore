@@ -18,3 +18,7 @@ artifacts/
 
 ## Aspire / local tooling
 .aspire/
+
+## Local SQLite when PostgreSQL connection string is not configured
+modulith-dev.db
+modulith-dev.db-*

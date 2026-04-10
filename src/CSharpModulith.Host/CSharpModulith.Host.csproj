@@ -5,6 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.2.1" />
     <PackageReference Include="Aspire.RabbitMQ.Client" Version="13.2.1" />
     <PackageReference Include="CommunityToolkit.Aspire.Microsoft.Data.Sqlite" Version="13.1.1" />
@@ -15,6 +20,7 @@
     <ProjectReference Include="..\CSharpModulith.Shared\CSharpModulith.Shared.csproj" />
     <ProjectReference Include="..\CSharpModulith.Capability.Order\CSharpModulith.Capability.Order.csproj" />
     <ProjectReference Include="..\CSharpModulith.Capability.Payment\CSharpModulith.Capability.Payment.csproj" />
+    <ProjectReference Include="..\CSharpModulith.Capability.Todos\CSharpModulith.Capability.Todos.csproj" />
   </ItemGroup>
 
 </Project>

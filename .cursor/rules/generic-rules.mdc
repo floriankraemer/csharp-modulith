@@ -12,18 +12,18 @@ alwaysApply: true
 
 ## Running Tool Commands
 
-The application is running in containers
+The repo is set up for Docker Compose: the **host** service runs the ASP.NET Core app; the **csharp** service is the .NET SDK dev image (same as `Dockerfile.dev` / `make build-dev-image`) and stays idle so you can exec into it.
 
-- Always run the commands in the php container
-- To start containers run `make up`
-- To run commands run `docker compose exec -T <command>`
-- To execute tests run `docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/console cache:clear && bin/phpunit"`
-- To execute PHPStan run `docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/phpstan"`
-- To execute PHPCS run `docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/phpcs"`
-- To execute PHPCBF run `docker compose exec -T php sh -c "export XDEBUG_MODE=off && bin/phpcbf"`
+- Always run build, test, and format commands **in the `csharp` container** (working directory `/src`).
+- To start the stack run `make up` (starts **host** and **csharp**). For a long-lived SDK shell use `make shell` instead (standalone `docker run`, not Compose).
+- To run a one-off command: `docker compose exec -T csharp <command>` (e.g. `docker compose exec -T csharp dotnet --version`).
+- To run tests: `docker compose exec -T csharp dotnet test CSharpModulith.sln -c Release`
+- To build the solution: `docker compose exec -T csharp dotnet build CSharpModulith.sln -c Release`
+- To apply formatting (whitespace / style where configured): `docker compose exec -T csharp dotnet format`
+- If bind-mount file ownership errors appear when building the **csharp** image, set `DEV_UID` / `DEV_GID` to your user before `docker compose build csharp`, e.g. `DEV_UID=$(id -u) DEV_GID=$(id -g) docker compose build csharp`.
 
 ## After Making changes
 
-- Before finishing a task you MUST run PHPCBF
-- Before finishing a task you MUST run PHPStan, if there are errors fix them
-- Before finishing a task you MUST run PHPUnit, if there are errors fix them
+- Before finishing a task you SHOULD run `dotnet format` (in the **csharp** container) so style stays consistent
+- Before finishing a task you MUST run `dotnet build` on the solution; fix any build or analyzer errors
+- Before finishing a task you MUST run `dotnet test` on the solution; fix failing tests

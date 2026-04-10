@@ -10,7 +10,7 @@ globs:
 
 ## Read Model Placement
 
-- Read models MUST be placed in `src/Capability/<CapabilityName>/Application/ReadModels/<EntityName>.php`.
+- Read models MUST be placed in `src/CSharpModulith.Capability.Application/ReadModels/<EntityName>.php`.
 - Read models MUST be in the namespace `App\Capability\<CapabilityName>\Application\ReadModels`.
 
 ## Read Model Structure
@@ -29,8 +29,8 @@ globs:
 
 ## Read Repository Interface
 
-- Read repository interfaces MUST be placed in the Application layer of a capability `src/Capability/<CapabilityName>/Application/Repositories/<RepositoryName>RepositoryInterface.php`.
-- Read repository implementations MUST be implemented in the Infrastructure layer of a capability `src/Capability/<CapabilityName>/Infrastructure/Persistence/Doctrine/<RepositoryName>ReadRepository.php`.
+- Read repository interfaces MUST be placed in the Application layer of a capability `src/CSharpModulith.Capability.Application/Repositories/<RepositoryName>RepositoryInterface.php`.
+- Read repository implementations MUST be implemented in the Infrastructure layer of a capability `src/CSharpModulith.Capability.Infrastructure/Persistence/Doctrine/<RepositoryName>ReadRepository.php`.
 - Read repository interfaces MUST be in the namespace `App\Capability\<CapabilityName>\Application\Repositories`.
 - Read repository interfaces MUST define methods that return read models or arrays of read models.
 - Read repository interfaces MAY define methods that return primitives (e.g., `countAll(): int`, `existsByX(): bool`).
@@ -38,7 +38,7 @@ globs:
 
 ## Read Repository Implementation
 
-- Read repository implementations MUST be placed in `src/Capability/<CapabilityName>/Infrastructure/Persistence/<PersistenceType>/<EntityName>ReadRepository.php`.
+- Read repository implementations MUST be placed in `src/CSharpModulith.Capability.Infrastructure/Persistence/<PersistenceType>/<EntityName>ReadRepository.php`.
 - Read repository implementations MUST be in the namespace `App\Capability\<CapabilityName>\Infrastructure\Persistence\<PersistenceType>`.
 - Read repository implementations MUST implement the corresponding read repository interface.
 - Read repository implementations MUST use **query builders** from `QueryBuilderFactoryInterface` (capability-specific `*QueryBuilder` classes) for database reads, analogous to write repositories. Do not embed SQL string assembly or row-to-model mapping inline in the repository.
@@ -59,7 +59,7 @@ When a read model needs data from another capability (for example organization m
 
 - These mappers are **not** aggregate write mappers. Do **not** use `ObjectAccessor` here; read models are built through their **constructors** (and nested read types if any), not via generic object hydration.
 - Do **not** mix aggregate `<AggregateName>Mapper` (ObjectAccessor, write repository) with read projection mappers in the same class. Two mapper types: **aggregate write mapper** vs **read row / projection mapper**—keep them separate.
-- Placement: `src/Capability/<CapabilityName>/Infrastructure/Persistence/<PersistenceType>/Mapper/`.
+- Placement: `src/CSharpModulith.Capability.Infrastructure/Persistence/<PersistenceType>/Mapper/`.
 - Naming: `<EntityName>ViewModelMapper` or `<EntityName>ReadRowMapper` (or similar explicit read-projection name). Avoid reusing the aggregate write mapper filename pattern for read-only projections when it would blur responsibilities.
 - Mappers MUST be in the namespace `App\Capability\<CapabilityName>\Infrastructure\Persistence\<PersistenceType>\Mapper`.
 - Mappers MUST be `readonly` classes.
@@ -69,7 +69,7 @@ When a read model needs data from another capability (for example organization m
 
 ## Query Objects
 
-- Query objects for complex queries MUST be placed in `src/Capability/<CapabilityName>/Application/Queries/<QueryName>Query.php`.
+- Query objects for complex queries MUST be placed in `src/CSharpModulith.Capability.Application/Queries/<QueryName>Query.php`.
 - Query objects MUST be in the namespace `App\Capability\<CapabilityName>\Application\Queries`.
 - Query objects MUST be `readonly` classes.
 - Query objects SHOULD use criteria objects for filtering (e.g., `FindBadgeCriteria`).
@@ -92,7 +92,7 @@ readonly class ListOrdersQuery(
 
 ## Query Builders
 
-- Query builders for complex queries MUST be placed in `src/Capability/<CapabilityName>/Infrastructure/Persistence/<PersistenceType>/QueryBuilder/<QueryName>QueryBuilder.php`.
+- Query builders for complex queries MUST be placed in `src/CSharpModulith.Capability.Infrastructure/Persistence/<PersistenceType>/QueryBuilder/<QueryName>QueryBuilder.php`.
 - Query builders MUST be in the namespace `App\Capability\<CapabilityName>\Infrastructure\Persistence\<PersistenceType>\QueryBuilder`.
 - Query builders SHOULD extend the persistence technology's query builder (e.g., `Doctrine\DBAL\Query\QueryBuilder`).
 - Query builders MUST have an `applyQuery(<QueryName>Query $query): self` method that applies the query to the builder.

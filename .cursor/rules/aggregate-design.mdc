@@ -16,8 +16,8 @@ globs: ./
 
 ## Placement
 
-- Aggregates MUST reside in the domain layer: `src/Capability/<CapabilityName>/Domain/Model/<AggregateName>`.
-- Related Entities and Value Objects SHOULD be in subdirectories or the same package as the Aggregate Root, e.g., `src/Capability/<CapabilityName>/Domain/Model/<AggregateName>/<EntityName>`.
+- Aggregates MUST reside in the domain layer: `src/CSharpModulith.Capability.Domain/Model/<AggregateName>`.
+- Related Entities and Value Objects SHOULD be in subdirectories or the same package as the Aggregate Root, e.g., `src/CSharpModulith.Capability.Domain/Model/<AggregateName>/<EntityName>`.
 
 ## Structure
 

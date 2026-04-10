@@ -6,7 +6,7 @@ globs:
 
 # Use Cases
 
-- Use cases are are implemented in the application layers `src/Capability/<Name>/UseCases/<UseCaseName>.php`.
+- Use cases are are implemented in the application layers `src/CSharpModulith.Capability.<Name>/Application/UseCases/<UseCaseName>.cs`.
 
 ## Specification Block
 
@@ -14,7 +14,7 @@ Every use case class must document all of methods with a first line `Specificati
 
 ### Specification Block Example
 
-```php
+```csharp
 /**
  * Specification:
  *

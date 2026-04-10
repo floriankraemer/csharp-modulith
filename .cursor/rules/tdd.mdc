@@ -12,7 +12,7 @@ This repository uses strict TDD for all backend code changes.
 
 ## Non-negotiable rules
 
-- You MUST create or update PHPUnit test(s) before writing production code.
+- You MUST create or update test(s) before writing production code.
 - You MUST run the new/updated test(s) and show they fail first (RED).
 - You MUST implement only the minimal production change needed to pass the failing test(s) (GREEN).
 - You MUST re-run the same test(s) and show they pass.
