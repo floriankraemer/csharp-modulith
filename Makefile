@@ -13,6 +13,7 @@ DEV_IMAGE ?= csharp-modulith-dev:latest
 DEV_UID ?= $(shell id -u)
 DEV_GID ?= $(shell id -g)
 # Extra docker build options only (UID/GID are always passed below)
+# Optional: pin CLI, e.g. DEV_BUILD_ARGS='--build-arg ASPIRE_CLI_VERSION=9.4'
 DEV_BUILD_ARGS ?=
 HOST_HTTP_PORT ?= 8080
 APP_LISTEN_PORT ?= 8080
@@ -38,6 +39,7 @@ help:
 	@echo "  make test-docker Same as make test (dev container)"
 	@echo "  Override ports: make run-app HOST_HTTP_PORT=5280 APP_LISTEN_PORT=5280"
 	@echo "  Dev image uses DEV_UID/DEV_GID (default: \$$(id -u)/\$$(id -g)) so bin/obj on the mount stay writable"
+	@echo "  Dev image includes Aspire CLI (aspire); pin with DEV_BUILD_ARGS='--build-arg ASPIRE_CLI_VERSION=<ver>' on build-dev-image"
 
 build:
 	$(COMPOSE) build

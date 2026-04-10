@@ -8,7 +8,7 @@ ARG DEV_GID=10001
 
 RUN set -eu; \
     apt-get update; \
-    apt-get install -y --no-install-recommends sudo; \
+    apt-get install -y --no-install-recommends sudo curl ca-certificates; \
     rm -rf /var/lib/apt/lists/*; \
     if getent passwd "${DEV_UID}" >/dev/null 2>&1; then \
         U="$(getent passwd "${DEV_UID}" | cut -d: -f1)"; \
@@ -23,6 +23,22 @@ RUN set -eu; \
         echo "${DEV_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${DEV_USER}"; \
     fi; \
     chmod 0440 /etc/sudoers.d/*
+
+# Aspire CLI for AppHost / local orchestration (https://aspire.dev/reference/cli/install-script/).
+# Install to /usr/local/bin so devuser has it on PATH without relying on $HOME/.aspire.
+ARG ASPIRE_CLI_VERSION=
+RUN set -eu; \
+    if [ -n "${ASPIRE_CLI_VERSION}" ]; then \
+        curl -fsSL https://aspire.dev/install.sh | bash -s -- \
+            --install-path /usr/local/bin \
+            --skip-path \
+            --version "${ASPIRE_CLI_VERSION}"; \
+    else \
+        curl -fsSL https://aspire.dev/install.sh | bash -s -- \
+            --install-path /usr/local/bin \
+            --skip-path; \
+    fi; \
+    aspire --version
 
 # Numeric user so it always matches the build args (existing or new account).
 USER ${DEV_UID}:${DEV_GID}
