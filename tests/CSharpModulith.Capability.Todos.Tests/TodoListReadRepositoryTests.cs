@@ -38,10 +38,12 @@ public sealed class TodoListReadRepositoryTests
             var mapper = new TodoListPersistenceMapper();
             var queue = new PostSaveAggregateEventsQueue();
             var dispatch = new CollectingEventDispatch();
+            var coordinator = new SaveChangesOnlyDomainEventPersistenceCoordinator();
             var write = new TodoListWriteRepository(
                 context,
                 mapper,
-                queue);
+                queue,
+                coordinator);
             var idB = TodoListId.From(Guid.NewGuid());
             var idA = TodoListId.From(Guid.NewGuid());
             await write.PersistAsync(TodoList.Create(idB, "Beta"));

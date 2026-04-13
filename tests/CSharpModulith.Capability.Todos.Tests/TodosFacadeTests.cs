@@ -24,6 +24,7 @@ public sealed class TodosFacadeTests
                 options.UseSqlite(connection)
                     .AddInterceptors(serviceProvider.GetRequiredService<PostSaveDomainEventsSaveChangesInterceptor>()));
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<TodosTestDbContext>());
+        services.AddScoped<DomainEventPersistenceCoordinatorInterface, SaveChangesOnlyDomainEventPersistenceCoordinator>();
         services.AddTodosCapability();
         services.AddScoped<EventDispatchInterface, CollectingEventDispatch>();
         return services.BuildServiceProvider();

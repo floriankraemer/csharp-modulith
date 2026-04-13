@@ -15,32 +15,11 @@ using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.AddModulithWolverine();
 
 builder.Services.AddSingleton<PostSaveDomainEventsSaveChangesInterceptor>();
 builder.Services.AddScoped<PostSaveAggregateEventsQueueInterface, PostSaveAggregateEventsQueue>();
 
-var postgresConnectionString = builder.Configuration.GetConnectionString("postgresdb");
-if (string.IsNullOrWhiteSpace(postgresConnectionString))
-{
-    var sqliteConnectionString = builder.Configuration.GetConnectionString("sqlite")
-        ?? "Data Source=modulith-dev.db";
-    builder.Services.AddDbContextPool<AppDbContext>(
-        (serviceProvider, options) =>
-        {
-            options.UseSqlite(sqliteConnectionString)
-                .AddInterceptors(serviceProvider.GetRequiredService<PostSaveDomainEventsSaveChangesInterceptor>());
-        });
-}
-else
-{
-    builder.Services.AddDbContextPool<AppDbContext>(
-        (serviceProvider, options) =>
-        {
-            options.UseNpgsql(postgresConnectionString)
-                .AddInterceptors(serviceProvider.GetRequiredService<PostSaveDomainEventsSaveChangesInterceptor>());
-        });
-}
+builder.AddModulithPersistenceAndWolverine();
 
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
 

@@ -8,7 +8,8 @@ namespace App.Capability.Todos.Infrastructure.Persistence.EfCore;
 public sealed class TodoListWriteRepository(
     DbContext context,
     TodoListPersistenceMapper mapper,
-    PostSaveAggregateEventsQueueInterface postSaveAggregateEventsQueue) : TodoListWriteRepositoryInterface
+    PostSaveAggregateEventsQueueInterface postSaveAggregateEventsQueue,
+    DomainEventPersistenceCoordinatorInterface domainEventPersistenceCoordinator) : TodoListWriteRepositoryInterface
 {
     public async Task<TodoList?> RestoreAsync(TodoListId listId, CancellationToken cancellationToken = default)
     {
@@ -40,6 +41,8 @@ public sealed class TodoListWriteRepository(
         }
 
         postSaveAggregateEventsQueue.Register(list);
-        await context.SaveChangesAsync(cancellationToken);
+        await domainEventPersistenceCoordinator.SaveChangesWithRegisteredDomainEventsAsync(
+            context,
+            cancellationToken);
     }
 }

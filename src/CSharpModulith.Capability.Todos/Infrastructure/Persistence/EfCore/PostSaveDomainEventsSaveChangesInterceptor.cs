@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 namespace App.Capability.Todos.Infrastructure.Persistence.EfCore;
 
 /// <summary>
-/// After a successful SaveChanges, dispatches pending domain events for aggregates registered on the scoped queue.
+/// After a successful SaveChanges, dispatches pending domain events for aggregates still registered on the scoped queue.
+/// When PostgreSQL + <see cref="App.Shared.Domain.DomainEventPersistenceCoordinatorInterface"/> uses the Wolverine EF outbox,
+/// the queue is drained before SaveChanges and this interceptor typically finds an empty queue.
 /// Resolves dependencies from the active DbContext service provider (scoped lifetime).
 /// </summary>
 public sealed class PostSaveDomainEventsSaveChangesInterceptor : SaveChangesInterceptor

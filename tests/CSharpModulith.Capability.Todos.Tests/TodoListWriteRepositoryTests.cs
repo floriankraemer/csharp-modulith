@@ -20,10 +20,12 @@ public sealed class TodoListWriteRepositoryTests
             var mapper = new TodoListPersistenceMapper();
             var queue = new PostSaveAggregateEventsQueue();
             var dispatch = new CollectingEventDispatch();
+            var coordinator = new SaveChangesOnlyDomainEventPersistenceCoordinator();
             var repository = new TodoListWriteRepository(
                 context,
                 mapper,
-                queue);
+                queue,
+                coordinator);
             var list = TodoList.Create(TodoListId.From(Guid.NewGuid()), "Groceries");
             list.AddItem(TodoItemId.From(Guid.NewGuid()), "Milk");
 
@@ -58,10 +60,12 @@ public sealed class TodoListWriteRepositoryTests
             var mapper = new TodoListPersistenceMapper();
             var queue = new PostSaveAggregateEventsQueue();
             var dispatch = new CollectingEventDispatch();
+            var coordinator = new SaveChangesOnlyDomainEventPersistenceCoordinator();
             var repository = new TodoListWriteRepository(
                 context,
                 mapper,
-                queue);
+                queue,
+                coordinator);
             var list = TodoList.Create(TodoListId.From(Guid.NewGuid()), "Work");
             var itemId = TodoItemId.From(Guid.NewGuid());
             list.AddItem(itemId, "Email");
