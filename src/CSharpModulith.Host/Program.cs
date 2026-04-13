@@ -1,11 +1,12 @@
 using App.Capability.Order.Infrastructure;
 using App.Capability.Payment.Infrastructure;
 using App.Capability.Todos.Infrastructure;
-using App.Capability.Todos.Infrastructure.Persistence.EfCore;
 using App.Capability.Todos.Infrastructure.Message;
 using App.Capability.Todos.Presentation.Http;
 using App.Shared;
 using App.Shared.Domain;
+using App.Shared.Infrastructure.Persistence;
+using App.Shared.Infrastructure.Persistence.EfCore;
 using Aspire.RabbitMQ.Client;
 using CSharpModulith.Host;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;

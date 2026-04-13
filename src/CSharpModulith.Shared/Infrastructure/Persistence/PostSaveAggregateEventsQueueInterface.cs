@@ -1,4 +1,6 @@
-namespace App.Shared.Domain;
+using App.Shared.Domain;
+
+namespace App.Shared.Infrastructure.Persistence;
 
 /// <summary>
 /// Scoped queue of aggregate roots that should have their pending domain events dispatched after SaveChanges succeeds.

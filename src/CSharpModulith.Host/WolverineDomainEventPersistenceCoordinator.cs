@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using App.Shared.Domain;
+using App.Shared.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Wolverine.EntityFrameworkCore;
 

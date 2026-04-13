@@ -3,6 +3,7 @@ using App.Capability.Todos.Domain.Model.TodoList.Events;
 using App.Capability.Todos.Infrastructure.Persistence.EfCore;
 using App.Capability.Todos.Tests.TestInfrastructure;
 using App.Shared.Domain;
+using App.Shared.Infrastructure.Persistence;
 
 namespace App.Capability.Todos.Tests;
 

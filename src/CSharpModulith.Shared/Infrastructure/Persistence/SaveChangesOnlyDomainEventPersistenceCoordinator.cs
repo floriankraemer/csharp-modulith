@@ -1,6 +1,7 @@
+using App.Shared.Domain;
 using Microsoft.EntityFrameworkCore;
 
-namespace App.Shared.Domain;
+namespace App.Shared.Infrastructure.Persistence;
 
 /// <summary>
 /// Standard EF SaveChanges; domain events are dispatched separately (e.g. via SaveChangesInterceptor + <see cref="EventDispatchInterface"/>).

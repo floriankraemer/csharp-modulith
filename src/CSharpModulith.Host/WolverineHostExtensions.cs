@@ -1,6 +1,6 @@
 using App.Capability.Todos.Infrastructure.Message;
-using App.Capability.Todos.Infrastructure.Persistence.EfCore;
-using App.Shared.Domain;
+using App.Shared.Infrastructure.Persistence;
+using App.Shared.Infrastructure.Persistence.EfCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;

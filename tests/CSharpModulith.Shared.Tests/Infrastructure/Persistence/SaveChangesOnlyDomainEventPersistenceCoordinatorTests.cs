@@ -1,7 +1,7 @@
-using App.Shared.Domain;
+using App.Shared.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace App.Shared.Tests.Domain;
+namespace App.Shared.Tests.Infrastructure.Persistence;
 
 public sealed class SaveChangesOnlyDomainEventPersistenceCoordinatorTests
 {

@@ -1,13 +1,14 @@
 using App.Shared.Domain;
+using App.Shared.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
-namespace App.Capability.Todos.Infrastructure.Persistence.EfCore;
+namespace App.Shared.Infrastructure.Persistence.EfCore;
 
 /// <summary>
 /// After a successful SaveChanges, dispatches pending domain events for aggregates still registered on the scoped queue.
-/// When PostgreSQL + <see cref="App.Shared.Domain.DomainEventPersistenceCoordinatorInterface"/> uses the Wolverine EF outbox,
+/// When PostgreSQL + <see cref="DomainEventPersistenceCoordinatorInterface"/> uses the Wolverine EF outbox,
 /// the queue is drained before SaveChanges and this interceptor typically finds an empty queue.
 /// Resolves dependencies from the active DbContext service provider (scoped lifetime).
 /// </summary>

@@ -1,6 +1,7 @@
 using App.Capability.Todos.Domain.Model.TodoList;
 using App.Capability.Todos.Domain.Repositories;
 using App.Shared.Domain;
+using App.Shared.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace App.Capability.Todos.Infrastructure.Persistence.EfCore;

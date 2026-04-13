@@ -1,4 +1,6 @@
-namespace App.Shared.Domain;
+using App.Shared.Domain;
+
+namespace App.Shared.Infrastructure.Persistence;
 
 /// <summary>
 /// Scoped buffer of aggregate roots whose domain events should be dispatched after SaveChanges succeeds.
