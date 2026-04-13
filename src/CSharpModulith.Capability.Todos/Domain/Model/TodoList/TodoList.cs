@@ -1,8 +1,9 @@
-using App.Capability.Todos.Domain;
+using App.Capability.Todos.Domain.Model.TodoList.Events;
+using App.Shared.Domain;
 
 namespace App.Capability.Todos.Domain.Model.TodoList;
 
-public sealed class TodoList
+public sealed class TodoList : AggregateRoot
 {
     private readonly List<TodoItem> _items = new();
 
@@ -25,10 +26,20 @@ public sealed class TodoList
             throw InvariantViolationException.Because("Todo list title must not be empty.");
         }
 
-        return new TodoList(id, title.Trim());
+        var trimmed = title.Trim();
+        var list = new TodoList(id, trimmed);
+        list.Raise(new TodoListWasCreated(
+            Guid.CreateVersion7(),
+            DateTimeOffset.UtcNow,
+            id,
+            trimmed));
+        return list;
     }
 
-    internal static TodoList Restore(TodoListId id, string title, IReadOnlyList<TodoItem> items)
+    /// <summary>
+    /// Rehydrates an aggregate from persistence. Does not emit domain events; clears any accidental pending queue.
+    /// </summary>
+    public static TodoList Restore(TodoListId id, string title, IReadOnlyList<TodoItem> items)
     {
         var list = new TodoList(id, title);
         foreach (var item in items)
@@ -36,6 +47,7 @@ public sealed class TodoList
             list._items.Add(item);
         }
 
+        list.ClearPendingEvents();
         return list;
     }
 
@@ -57,8 +69,15 @@ public sealed class TodoList
         }
 
         var nextOrder = _items.Count == 0 ? 0 : _items.Max(i => i.SortOrder) + 1;
-        var item = new TodoItem(itemId, title.Trim(), isCompleted: false, sortOrder: nextOrder);
+        var trimmed = title.Trim();
+        var item = new TodoItem(itemId, trimmed, isCompleted: false, sortOrder: nextOrder);
         _items.Add(item);
+        Raise(new TodoItemWasAdded(
+            Guid.CreateVersion7(),
+            DateTimeOffset.UtcNow,
+            Id,
+            itemId,
+            trimmed));
         return item;
     }
 
@@ -93,5 +112,4 @@ public sealed class TodoList
 
         return item;
     }
-
 }

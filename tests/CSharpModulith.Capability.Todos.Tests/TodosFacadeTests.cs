@@ -2,7 +2,9 @@ using App.Capability.Todos;
 using App.Capability.Todos.Application;
 using App.Capability.Todos.Application.Requests;
 using App.Capability.Todos.Infrastructure;
+using App.Capability.Todos.Infrastructure.Persistence.EfCore;
 using App.Capability.Todos.Tests.TestInfrastructure;
+using App.Shared.Domain;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,25 +14,34 @@ namespace App.Capability.Todos.Tests;
 [Trait("Capability", "Todos")]
 public sealed class TodosFacadeTests
 {
+    private static ServiceProvider BuildTodosProvider(SqliteConnection connection)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<PostSaveDomainEventsSaveChangesInterceptor>();
+        services.AddScoped<PostSaveAggregateEventsQueueInterface, PostSaveAggregateEventsQueue>();
+        services.AddDbContext<TodosTestDbContext>(
+            (serviceProvider, options) =>
+                options.UseSqlite(connection)
+                    .AddInterceptors(serviceProvider.GetRequiredService<PostSaveDomainEventsSaveChangesInterceptor>()));
+        services.AddScoped<DbContext>(sp => sp.GetRequiredService<TodosTestDbContext>());
+        services.AddTodosCapability();
+        services.AddScoped<EventDispatchInterface, CollectingEventDispatch>();
+        return services.BuildServiceProvider();
+    }
+
     [Fact]
     public async Task createTodoList_returns_list_id_when_title_valid()
     {
         // Arrange
         await using var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<TodosTestDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        await using var ctx = new TodosTestDbContext(options);
+        await using var ctx = new TodosTestDbContext(
+            new DbContextOptionsBuilder<TodosTestDbContext>()
+                .UseSqlite(connection)
+                .Options);
         await ctx.Database.EnsureCreatedAsync();
 
-        var services = new ServiceCollection();
-        services.AddSingleton(options);
-        services.AddScoped<TodosTestDbContext>(_ => new TodosTestDbContext(options));
-        services.AddScoped<DbContext>(sp => sp.GetRequiredService<TodosTestDbContext>());
-        services.AddTodosCapability();
-        await using var provider = services.BuildServiceProvider();
+        await using var provider = BuildTodosProvider(connection);
         var facade = provider.GetRequiredService<TodosFacadeInterface>();
 
         // Act
@@ -48,19 +59,13 @@ public sealed class TodosFacadeTests
         // Arrange
         await using var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<TodosTestDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        await using var ctx = new TodosTestDbContext(options);
+        await using var ctx = new TodosTestDbContext(
+            new DbContextOptionsBuilder<TodosTestDbContext>()
+                .UseSqlite(connection)
+                .Options);
         await ctx.Database.EnsureCreatedAsync();
 
-        var services = new ServiceCollection();
-        services.AddSingleton(options);
-        services.AddScoped<TodosTestDbContext>(_ => new TodosTestDbContext(options));
-        services.AddScoped<DbContext>(sp => sp.GetRequiredService<TodosTestDbContext>());
-        services.AddTodosCapability();
-        await using var provider = services.BuildServiceProvider();
+        await using var provider = BuildTodosProvider(connection);
         var facade = provider.GetRequiredService<TodosFacadeInterface>();
 
         // Act
@@ -77,19 +82,13 @@ public sealed class TodosFacadeTests
         // Arrange
         await using var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<TodosTestDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        await using var ctx = new TodosTestDbContext(options);
+        await using var ctx = new TodosTestDbContext(
+            new DbContextOptionsBuilder<TodosTestDbContext>()
+                .UseSqlite(connection)
+                .Options);
         await ctx.Database.EnsureCreatedAsync();
 
-        var services = new ServiceCollection();
-        services.AddSingleton(options);
-        services.AddScoped<TodosTestDbContext>(_ => new TodosTestDbContext(options));
-        services.AddScoped<DbContext>(sp => sp.GetRequiredService<TodosTestDbContext>());
-        services.AddTodosCapability();
-        await using var provider = services.BuildServiceProvider();
+        await using var provider = BuildTodosProvider(connection);
         var facade = provider.GetRequiredService<TodosFacadeInterface>();
 
         var created = await facade.CreateTodoList(new CreateTodoListRequest(Title: "List"));
@@ -113,19 +112,13 @@ public sealed class TodosFacadeTests
         // Arrange
         await using var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<TodosTestDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        await using var ctx = new TodosTestDbContext(options);
+        await using var ctx = new TodosTestDbContext(
+            new DbContextOptionsBuilder<TodosTestDbContext>()
+                .UseSqlite(connection)
+                .Options);
         await ctx.Database.EnsureCreatedAsync();
 
-        var services = new ServiceCollection();
-        services.AddSingleton(options);
-        services.AddScoped<TodosTestDbContext>(_ => new TodosTestDbContext(options));
-        services.AddScoped<DbContext>(sp => sp.GetRequiredService<TodosTestDbContext>());
-        services.AddTodosCapability();
-        await using var provider = services.BuildServiceProvider();
+        await using var provider = BuildTodosProvider(connection);
         var facade = provider.GetRequiredService<TodosFacadeInterface>();
 
         // Act
@@ -142,19 +135,13 @@ public sealed class TodosFacadeTests
         // Arrange
         await using var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<TodosTestDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        await using var ctx = new TodosTestDbContext(options);
+        await using var ctx = new TodosTestDbContext(
+            new DbContextOptionsBuilder<TodosTestDbContext>()
+                .UseSqlite(connection)
+                .Options);
         await ctx.Database.EnsureCreatedAsync();
 
-        var services = new ServiceCollection();
-        services.AddSingleton(options);
-        services.AddScoped<TodosTestDbContext>(_ => new TodosTestDbContext(options));
-        services.AddScoped<DbContext>(sp => sp.GetRequiredService<TodosTestDbContext>());
-        services.AddTodosCapability();
-        await using var provider = services.BuildServiceProvider();
+        await using var provider = BuildTodosProvider(connection);
         var facade = provider.GetRequiredService<TodosFacadeInterface>();
 
         await facade.CreateTodoList(new CreateTodoListRequest(Title: "First"));

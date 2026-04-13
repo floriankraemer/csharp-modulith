@@ -1,12 +1,14 @@
 using App.Capability.Todos.Domain.Model.TodoList;
 using App.Capability.Todos.Domain.Repositories;
+using App.Shared.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace App.Capability.Todos.Infrastructure.Persistence.EfCore;
 
 public sealed class TodoListWriteRepository(
     DbContext context,
-    TodoListPersistenceMapper mapper) : TodoListWriteRepositoryInterface
+    TodoListPersistenceMapper mapper,
+    PostSaveAggregateEventsQueueInterface postSaveAggregateEventsQueue) : TodoListWriteRepositoryInterface
 {
     public async Task<TodoList?> RestoreAsync(TodoListId listId, CancellationToken cancellationToken = default)
     {
@@ -37,6 +39,7 @@ public sealed class TodoListWriteRepository(
             mapper.ApplyToTrackedEntity(list, existing);
         }
 
+        postSaveAggregateEventsQueue.Register(list);
         await context.SaveChangesAsync(cancellationToken);
     }
 }

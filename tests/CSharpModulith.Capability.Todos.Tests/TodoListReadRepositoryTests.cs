@@ -2,6 +2,7 @@ using App.Capability.Todos.Application.Repositories;
 using App.Capability.Todos.Domain.Model.TodoList;
 using App.Capability.Todos.Infrastructure.Persistence.EfCore;
 using App.Capability.Todos.Tests.TestInfrastructure;
+using App.Shared.Domain;
 
 namespace App.Capability.Todos.Tests;
 
@@ -35,11 +36,22 @@ public sealed class TodoListReadRepositoryTests
         await using (context)
         {
             var mapper = new TodoListPersistenceMapper();
-            var write = new TodoListWriteRepository(context, mapper);
+            var queue = new PostSaveAggregateEventsQueue();
+            var dispatch = new CollectingEventDispatch();
+            var write = new TodoListWriteRepository(
+                context,
+                mapper,
+                queue);
             var idB = TodoListId.From(Guid.NewGuid());
             var idA = TodoListId.From(Guid.NewGuid());
             await write.PersistAsync(TodoList.Create(idB, "Beta"));
+            await PostSaveDomainEventsTestSupport.DispatchRegisteredEventsAsync(
+                queue,
+                dispatch);
             await write.PersistAsync(TodoList.Create(idA, "Alpha"));
+            await PostSaveDomainEventsTestSupport.DispatchRegisteredEventsAsync(
+                queue,
+                dispatch);
             var repository = new TodoListReadRepository(context);
 
             // Act

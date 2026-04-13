@@ -1,6 +1,8 @@
 using App.Capability.Todos.Domain.Model.TodoList;
+using App.Capability.Todos.Domain.Model.TodoList.Events;
 using App.Capability.Todos.Infrastructure.Persistence.EfCore;
 using App.Capability.Todos.Tests.TestInfrastructure;
+using App.Shared.Domain;
 
 namespace App.Capability.Todos.Tests;
 
@@ -16,12 +18,20 @@ public sealed class TodoListWriteRepositoryTests
         await using (context)
         {
             var mapper = new TodoListPersistenceMapper();
-            var repository = new TodoListWriteRepository(context, mapper);
+            var queue = new PostSaveAggregateEventsQueue();
+            var dispatch = new CollectingEventDispatch();
+            var repository = new TodoListWriteRepository(
+                context,
+                mapper,
+                queue);
             var list = TodoList.Create(TodoListId.From(Guid.NewGuid()), "Groceries");
             list.AddItem(TodoItemId.From(Guid.NewGuid()), "Milk");
 
             // Act
             await repository.PersistAsync(list);
+            await PostSaveDomainEventsTestSupport.DispatchRegisteredEventsAsync(
+                queue,
+                dispatch);
             var loaded = await repository.RestoreAsync(list.Id);
 
             // Assert
@@ -31,6 +41,9 @@ public sealed class TodoListWriteRepositoryTests
             Assert.Single(loaded.Items);
             Assert.Equal("Milk", loaded.Items[0].Title);
             Assert.False(loaded.Items[0].IsCompleted);
+            Assert.Equal(2, dispatch.Dispatched.Count);
+            Assert.Contains(dispatch.Dispatched, e => e is TodoListWasCreated);
+            Assert.Contains(dispatch.Dispatched, e => e is TodoItemWasAdded);
         }
     }
 
@@ -43,16 +56,27 @@ public sealed class TodoListWriteRepositoryTests
         await using (context)
         {
             var mapper = new TodoListPersistenceMapper();
-            var repository = new TodoListWriteRepository(context, mapper);
+            var queue = new PostSaveAggregateEventsQueue();
+            var dispatch = new CollectingEventDispatch();
+            var repository = new TodoListWriteRepository(
+                context,
+                mapper,
+                queue);
             var list = TodoList.Create(TodoListId.From(Guid.NewGuid()), "Work");
             var itemId = TodoItemId.From(Guid.NewGuid());
             list.AddItem(itemId, "Email");
             await repository.PersistAsync(list);
+            await PostSaveDomainEventsTestSupport.DispatchRegisteredEventsAsync(
+                queue,
+                dispatch);
 
             list.CompleteItem(itemId);
 
             // Act
             await repository.PersistAsync(list);
+            await PostSaveDomainEventsTestSupport.DispatchRegisteredEventsAsync(
+                queue,
+                dispatch);
             var loaded = await repository.RestoreAsync(list.Id);
 
             // Assert

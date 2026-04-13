@@ -1,8 +1,11 @@
 using App.Capability.Order.Infrastructure;
 using App.Capability.Payment.Infrastructure;
 using App.Capability.Todos.Infrastructure;
+using App.Capability.Todos.Infrastructure.Persistence.EfCore;
+using App.Capability.Todos.Infrastructure.Message;
 using App.Capability.Todos.Presentation.Http;
 using App.Shared;
+using App.Shared.Domain;
 using Aspire.RabbitMQ.Client;
 using CSharpModulith.Host;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -12,18 +15,31 @@ using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddModulithWolverine();
+
+builder.Services.AddSingleton<PostSaveDomainEventsSaveChangesInterceptor>();
+builder.Services.AddScoped<PostSaveAggregateEventsQueueInterface, PostSaveAggregateEventsQueue>();
 
 var postgresConnectionString = builder.Configuration.GetConnectionString("postgresdb");
 if (string.IsNullOrWhiteSpace(postgresConnectionString))
 {
     var sqliteConnectionString = builder.Configuration.GetConnectionString("sqlite")
         ?? "Data Source=modulith-dev.db";
-    builder.Services.AddDbContextPool<AppDbContext>(options =>
-        options.UseSqlite(sqliteConnectionString));
+    builder.Services.AddDbContextPool<AppDbContext>(
+        (serviceProvider, options) =>
+        {
+            options.UseSqlite(sqliteConnectionString)
+                .AddInterceptors(serviceProvider.GetRequiredService<PostSaveDomainEventsSaveChangesInterceptor>());
+        });
 }
 else
 {
-    builder.AddNpgsqlDbContext<AppDbContext>(connectionName: "postgresdb");
+    builder.Services.AddDbContextPool<AppDbContext>(
+        (serviceProvider, options) =>
+        {
+            options.UseNpgsql(postgresConnectionString)
+                .AddInterceptors(serviceProvider.GetRequiredService<PostSaveDomainEventsSaveChangesInterceptor>());
+        });
 }
 
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
@@ -42,6 +58,7 @@ builder.Services.AddSingleton(new AppConfig(builder.Environment.EnvironmentName)
 builder.Services.AddOrderCapability();
 builder.Services.AddPaymentCapability();
 builder.Services.AddTodosCapability();
+builder.Services.AddScoped<EventDispatchInterface, WolverineEventDispatch>();
 
 var app = builder.Build();
 
