@@ -21,10 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\CSharpModulith.Capability.Order\CSharpModulith.Capability.Order.csproj" />
-    <ProjectReference Include="..\..\..\src\CSharpModulith.Capability.Payment\CSharpModulith.Capability.Payment.csproj" />
-    <ProjectReference Include="..\..\..\src\CSharpModulith.Capability.Todos\CSharpModulith.Capability.Todos.csproj" />
-    <ProjectReference Include="..\..\..\src\CSharpModulith.Shared\CSharpModulith.Shared.csproj" />
+    <ProjectReference Include="..\..\src\CSharpModulith.Capability.Order\CSharpModulith.Capability.Order.csproj" />
+    <ProjectReference Include="..\..\src\CSharpModulith.Capability.Payment\CSharpModulith.Capability.Payment.csproj" />
+    <ProjectReference Include="..\..\src\CSharpModulith.Capability.Todos\CSharpModulith.Capability.Todos.csproj" />
+    <ProjectReference Include="..\..\src\CSharpModulith.Shared\CSharpModulith.Shared.csproj" />
   </ItemGroup>
 
 </Project>

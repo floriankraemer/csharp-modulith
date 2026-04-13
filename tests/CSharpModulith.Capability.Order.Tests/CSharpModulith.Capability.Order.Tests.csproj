@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <RootNamespace>App.Capability.Payment.Tests</RootNamespace>
+    <RootNamespace>App.Capability.Order.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\CSharpModulith.Capability.Payment\CSharpModulith.Capability.Payment.csproj" />
+    <ProjectReference Include="..\..\src\CSharpModulith.Capability.Order\CSharpModulith.Capability.Order.csproj" />
   </ItemGroup>
 
 </Project>
