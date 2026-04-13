@@ -25,7 +25,7 @@ COVERAGE_RAW := $(COVERAGE_DIR)/raw
 # Run SDK commands in the Compose *service* `csharp` (see docker-compose.yml). Start it with ensure-csharp or make up.
 COMPOSE_CSHARP := $(COMPOSE) exec -T csharp
 
-.PHONY: help build run up down logs shell test test-coverage test-docker build-dev-image ensure-csharp fix-test-artifacts build-app run-app clean
+.PHONY: help build run up down logs shell test test-coverage test-docker build-dev-image ensure-csharp fix-test-artifacts build-app release run-app clean
 
 help:
 	@echo "Docker (default workflow):"
@@ -41,6 +41,7 @@ help:
 	@echo "Dev SDK container (non-root devuser, passwordless sudo; no host dotnet required):"
 	@echo "  make build-dev-image  Build $(DEV_IMAGE) from Dockerfile.dev"
 	@echo "  make build-app   dotnet build Host inside the dev container"
+	@echo "  make release     dotnet build full solution in Release (-c Release) inside the dev container"
 	@echo "  make run-app     Build then run Host in the dev container (http://localhost:$(HOST_HTTP_PORT))"
 	@echo "  make test        dotnet test via compose exec csharp (starts csharp service if needed)"
 	@echo "  make test-coverage  tests + merged $(COVERAGE_DIR)/coverage.cobertura.xml + HTML report $(COVERAGE_DIR)/html/"
@@ -106,6 +107,9 @@ test-coverage: ensure-csharp
 
 build-app: ensure-csharp
 	$(COMPOSE_CSHARP) dotnet build $(HOST_PROJECT) -c $(CONFIG)
+
+release: ensure-csharp
+	$(COMPOSE_CSHARP) dotnet build CSharpModulith.sln -c Release
 
 run-app: build-app
 	docker run --rm -it \

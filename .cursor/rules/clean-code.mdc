@@ -78,4 +78,11 @@ You are a highly skilled software engineer committed to writing clean, maintaina
 - **Duplicated Code**: DRY (Don't Repeat Yourself) by extracting reusable logic.
 - **Excessive Comments**: Clean code should not require excessive explanation.
 
+## Control flow: avoid `else` when possible
+
+- **Default**: Prefer **no `else`**. Use **guard clauses** and **early returns** so the main path reads straight down without a trailing alternative branch.
+- **Binary branches**: When both outcomes are short and mutually exclusive, two separate `if` blocks (second condition explicitly negated or distinct) is often clearer than `if` / `else`.
+- **Many outcomes**: Prefer **`switch` expressions** or **`switch` statements** over long `if` / `else if` chains when the discriminator is one value.
+- **When `else` is acceptable**: Only when it is objectively simpler than the alternatives (e.g. a trivial assignment) and does not increase nesting.
+
 By following these principles, you ensure that your code remains maintainable, scalable, and easy to understand.

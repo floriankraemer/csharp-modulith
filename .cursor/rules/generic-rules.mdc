@@ -8,7 +8,7 @@ alwaysApply: true
 - Don't use filler words and sentences
 - Always say the truth
 - Always be fact oriented and data driven
-- Avoid else-statements whenever possible
+- Avoid `else` when possible: prefer guard clauses and early returns; for two-way setup, use mutually exclusive `if` blocks or extract a small method. See **Control flow: avoid `else` when possible** in [clean-code.mdc](clean-code.mdc).
 
 ## Running Tool Commands
 

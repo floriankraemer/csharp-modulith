@@ -61,7 +61,8 @@ internal static class WolverineHostExtensions
                 DomainEventPersistenceCoordinatorInterface,
                 SaveChangesOnlyDomainEventPersistenceCoordinator>();
         }
-        else
+
+        if (!string.IsNullOrWhiteSpace(postgresConnectionString))
         {
             builder.Services.AddScoped<
                 DomainEventPersistenceCoordinatorInterface,
