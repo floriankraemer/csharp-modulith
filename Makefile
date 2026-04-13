@@ -18,17 +18,19 @@ DEV_BUILD_ARGS ?=
 HOST_HTTP_PORT ?= 8080
 APP_LISTEN_PORT ?= 8080
 
-DOCKER_DEV := docker run --rm -v "$(REPO_ROOT):/src" -w /src $(DEV_IMAGE)
+# Run SDK commands in the Compose *service* `csharp` (see docker-compose.yml). Start it with ensure-csharp or make up.
+COMPOSE_CSHARP := $(COMPOSE) exec -T csharp
 
-.PHONY: help build run up down logs shell test test-docker build-dev-image build-app run-app clean
+.PHONY: help build run up down logs shell test test-docker build-dev-image ensure-csharp fix-test-artifacts build-app run-app clean
 
 help:
 	@echo "Docker (default workflow):"
 	@echo "  make build   Build the Host image (docker compose build)"
 	@echo "  make run     Build (if needed) and start the stack in the foreground"
 	@echo "  make up      Build and start in detached mode (host + csharp SDK container)"
-	@echo "  SDK tooling: docker compose exec -T csharp dotnet test CSharpModulith.sln -c Release"
-	@echo "  ArchUnitNET layer tests: tests/Architecture/CSharpModulith.Architecture.Tests (prefer -c Debug per ArchUnitNET docs)"
+	@echo "  SDK tooling (requires: make up, or any target that runs ensure-csharp):"
+	@echo "    docker compose exec -T csharp dotnet test CSharpModulith.sln -c Release"
+	@echo "  ArchUnitNET: tests/CSharpModulith.Architecture.Tests (prefer -c Debug per ArchUnitNET docs)"
 	@echo "  make down    Stop and remove containers"
 	@echo "  make logs    Follow compose logs (use after make up)"
 	@echo ""
@@ -36,9 +38,9 @@ help:
 	@echo "  make build-dev-image  Build $(DEV_IMAGE) from Dockerfile.dev"
 	@echo "  make build-app   dotnet build Host inside the dev container"
 	@echo "  make run-app     Build then run Host in the dev container (http://localhost:$(HOST_HTTP_PORT))"
-	@echo "  make test        dotnet test solution inside the dev container"
-	@echo "  make shell       Interactive bash as devuser in the dev container"
-	@echo "  make test-docker Same as make test (dev container)"
+	@echo "  make test        dotnet test via compose exec csharp (starts csharp service if needed)"
+	@echo "  make shell       Interactive bash in the running csharp service"
+	@echo "  make test-docker Same as make test"
 	@echo "  Override ports: make run-app HOST_HTTP_PORT=5280 APP_LISTEN_PORT=5280"
 	@echo "  Dev image uses DEV_UID/DEV_GID (default: \$$(id -u)/\$$(id -g)) so bin/obj on the mount stay writable"
 	@echo "  Dev image includes Aspire CLI (aspire); pin with DEV_BUILD_ARGS='--build-arg ASPIRE_CLI_VERSION=<ver>' on build-dev-image"
@@ -64,17 +66,20 @@ build-dev-image:
 		--build-arg DEV_GID=$(DEV_GID) \
 		.
 
-shell: build-dev-image
-	docker run --rm -it -v "$(REPO_ROOT):/src" -w /src $(DEV_IMAGE) bash
+# Build/start only the SDK service so exec uses your DEV_UID/DEV_GID from the compose build.
+ensure-csharp:
+	DEV_UID=$(DEV_UID) DEV_GID=$(DEV_GID) $(COMPOSE) up -d --build csharp
 
-test-docker: build-dev-image
-	$(DOCKER_DEV) dotnet test CSharpModulith.sln -c $(CONFIG)
+shell: ensure-csharp
+	$(COMPOSE) exec -it csharp bash
 
-test: build-dev-image
-	$(DOCKER_DEV) dotnet test CSharpModulith.sln -c $(CONFIG)
+test-docker: test
 
-build-app: build-dev-image
-	$(DOCKER_DEV) dotnet build $(HOST_PROJECT) -c $(CONFIG)
+test: ensure-csharp
+	$(COMPOSE_CSHARP) dotnet test CSharpModulith.sln -c $(CONFIG)
+
+build-app: ensure-csharp
+	$(COMPOSE_CSHARP) dotnet build $(HOST_PROJECT) -c $(CONFIG)
 
 run-app: build-app
 	docker run --rm -it \
@@ -85,5 +90,5 @@ run-app: build-app
 
 clean:
 	$(COMPOSE) down -v --rmi local 2>/dev/null || true
-	-docker run --rm -v "$(REPO_ROOT):/src" -w /src $(DEV_IMAGE) dotnet clean CSharpModulith.sln -c $(CONFIG)
+	-$(COMPOSE_CSHARP) dotnet clean CSharpModulith.sln -c $(CONFIG) 2>/dev/null || true
 	-dotnet clean CSharpModulith.sln -c $(CONFIG) 2>/dev/null || true
