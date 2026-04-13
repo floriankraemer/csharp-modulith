@@ -18,10 +18,14 @@ DEV_BUILD_ARGS ?=
 HOST_HTTP_PORT ?= 8080
 APP_LISTEN_PORT ?= 8080
 
+# Coverage: per-run Cobertura under $(COVERAGE_DIR)/raw/, merged Cobertura + HTML under $(COVERAGE_DIR)/ (see .gitignore)
+COVERAGE_DIR ?= coverage
+COVERAGE_RAW := $(COVERAGE_DIR)/raw
+
 # Run SDK commands in the Compose *service* `csharp` (see docker-compose.yml). Start it with ensure-csharp or make up.
 COMPOSE_CSHARP := $(COMPOSE) exec -T csharp
 
-.PHONY: help build run up down logs shell test test-docker build-dev-image ensure-csharp fix-test-artifacts build-app run-app clean
+.PHONY: help build run up down logs shell test test-coverage test-docker build-dev-image ensure-csharp fix-test-artifacts build-app run-app clean
 
 help:
 	@echo "Docker (default workflow):"
@@ -39,6 +43,7 @@ help:
 	@echo "  make build-app   dotnet build Host inside the dev container"
 	@echo "  make run-app     Build then run Host in the dev container (http://localhost:$(HOST_HTTP_PORT))"
 	@echo "  make test        dotnet test via compose exec csharp (starts csharp service if needed)"
+	@echo "  make test-coverage  tests + merged $(COVERAGE_DIR)/coverage.cobertura.xml + HTML report $(COVERAGE_DIR)/html/"
 	@echo "  make shell       Interactive bash in the running csharp service"
 	@echo "  make test-docker Same as make test"
 	@echo "  Override ports: make run-app HOST_HTTP_PORT=5280 APP_LISTEN_PORT=5280"
@@ -77,6 +82,27 @@ test-docker: test
 
 test: ensure-csharp
 	$(COMPOSE_CSHARP) dotnet test CSharpModulith.sln -c $(CONFIG)
+
+test-coverage: ensure-csharp
+	$(COMPOSE_CSHARP) sh -c '\
+		set -eu; \
+		dotnet tool restore; \
+		rm -rf "/src/$(COVERAGE_DIR)"; \
+		dotnet test CSharpModulith.sln -c $(CONFIG) \
+			--settings coverage.runsettings \
+			--collect:"XPlat code coverage" \
+			--results-directory "/src/$(COVERAGE_RAW)"; \
+		dotnet tool run reportgenerator \
+			"-reports:/src/$(COVERAGE_RAW)/**/coverage.cobertura.xml" \
+			"-targetdir:/src/$(COVERAGE_DIR)" \
+			"-reporttypes:Cobertura"; \
+		if [ -f "/src/$(COVERAGE_DIR)/Cobertura.xml" ]; then \
+			mv "/src/$(COVERAGE_DIR)/Cobertura.xml" "/src/$(COVERAGE_DIR)/coverage.cobertura.xml"; \
+		fi; \
+		dotnet tool run reportgenerator \
+			"-reports:/src/$(COVERAGE_DIR)/coverage.cobertura.xml" \
+			"-targetdir:/src/$(COVERAGE_DIR)/html" \
+			"-reporttypes:Html"'
 
 build-app: ensure-csharp
 	$(COMPOSE_CSHARP) dotnet build $(HOST_PROJECT) -c $(CONFIG)

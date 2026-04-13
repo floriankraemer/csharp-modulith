@@ -18,6 +18,7 @@ The repo is set up for Docker Compose: the **host** service runs the ASP.NET Cor
 - To start the stack run `make up` (starts **host** and **csharp**). For a long-lived SDK shell use `make shell` instead (standalone `docker run`, not Compose).
 - To run a one-off command: `docker compose exec -T csharp <command>` (e.g. `docker compose exec -T csharp dotnet --version`).
 - To run tests: `docker compose exec -T csharp dotnet test CSharpModulith.sln -c Release`
+- For merged Cobertura + HTML coverage (Coverlet + local ReportGenerator tool): `make test-coverage` → `coverage/coverage.cobertura.xml`, `coverage/html/index.html`, raw inputs under `coverage/raw/`
 - To build the solution: `docker compose exec -T csharp dotnet build CSharpModulith.sln -c Release`
 - To apply formatting (whitespace / style where configured): `docker compose exec -T csharp dotnet format`
 - If bind-mount file ownership errors appear when building the **csharp** image, set `DEV_UID` / `DEV_GID` to your user before `docker compose build csharp`, e.g. `DEV_UID=$(id -u) DEV_GID=$(id -g) docker compose build csharp`.

@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Run test suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker and Compose versions
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Run tests
+        run: make test
