@@ -19,7 +19,7 @@ src/
 - **Shared kernel** lives in `src/CSharpModulith.Shared/`.
 - **Host**, **AppHost**, and **ServiceDefaults** are composition and platform; they are **not** business capabilities.
 
-Capability tests: `tests/Capability/<CapabilityName>/CSharpModulith.Capability.<CapabilityName>.Tests/`.
+Capability tests: `tests/CSharpModulith.Capability.<CapabilityName>.Tests/` (see **Test Folder Setup** below).
 
 # Physical paths vs root namespaces
 
@@ -107,11 +107,19 @@ src/CSharpModulith.Capability.<Name>/
 - The domain layer MUST NOT depend on infrastructure or host frameworks.
 - You MUST NOT catch exceptions in the domain layer unless explicitly specified.
 
+### Domain assembly marker (ArchUnitNET)
+
+- Each capability that participates in solution-wide architecture rules MUST include an empty static type `<Name>DomainMarker` under `Domain/` (e.g. `TodosDomainMarker` in `App.Capability.Todos.Domain`).
+- **Purpose:** [ArchUnitNET](https://github.com/TNG/ArchUnitNET) loads compiled assemblies via `typeof(<Name>DomainMarker).Assembly`. The test project references `tests/CSharpModulith.Architecture.Tests/CapabilityLayerArchitectureTests.cs`, which registers those assemblies to enforce layer rules (domain vs application vs infrastructure vs presentation).
+- The marker is **not** application logic. Document it with an XML `<summary>` explaining the ArchUnit anchor (avoid tying tests to arbitrary domain types that may move).
+- When you add a capability (or split domain into its own assembly), add `<Name>DomainMarker.cs` and register `typeof(<Name>DomainMarker).Assembly` in `CapabilityLayerArchitectureTests` alongside the other capabilities.
+
 ### Domain layer folder structure
 
 ```text
 src/CSharpModulith.Capability.<Name>/
 |-- Domain/
+|   |-- <Name>DomainMarker.cs       # empty; ArchUnitNET assembly anchor (see “Domain assembly marker”)
 |   |-- Model/
 |   |   |-- <Aggregate>/
 |   |   |   |-- Events/
@@ -179,6 +187,15 @@ src/CSharpModulith.Capability.<Name>/
 |   |   |-- Mappers/
 |   |-- <Name>PresentationException.cs
 ```
+
+## Test Folder Setup
+
+Tests live under `tests/` in projects whose names mirror the production projects under `src/`.
+
+- **Naming**: Use the same `CSharpModulith.*` root as the code under test, append **`.Tests`** to the project folder name (e.g. `src/CSharpModulith.Capability.Todos/` → `tests/CSharpModulith.Capability.Todos.Tests/`; `src/CSharpModulith.Shared/` → `tests/CSharpModulith.Shared.Tests/`). Cross-cutting architecture rules use `tests/CSharpModulith.Architecture.Tests/`.
+- **Mirroring (mandatory)**: Inside a test project, **folder paths must mirror the actual structure** of the project under test in `src/`. Same top-level layers (`Application`, `Domain`, `Infrastructure`, `Presentation`, …) and the **same subfolders** as the production tree (e.g. `Application/UseCases/<UseCase>/`, `Domain/Model/<Aggregate>/`). A test file belongs in the folder that matches the type it exercises. Do not use a flat test root or ad-hoc folders when production code is organized in layers.
+- **Test-only folders**: Helpers with **no** production counterpart (e.g. in-memory DB, `WebApplicationFactory`, fakes shared by many tests) live under a **single** root folder in the test project, e.g. `TestInfrastructure/` or `Support/`. Do **not** use `Common/` or other names that could be confused with production layout unless `src/` has the same folder.
+- **Namespaces**: Mirror production namespaces by inserting **`.Tests`** after the capability/shared segment—e.g. production `App.Capability.Todos.Application` → tests `App.Capability.Todos.Tests.Application`; production `App.Shared.Application` → `App.Shared.Tests.Application`. Folder path and namespace stay aligned.
 
 # Shared kernel
 
